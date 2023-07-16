@@ -1,3 +1,6 @@
+#ifndef SERVER_HPP
+# define SERVER_HPP
+
 #include <iostream>
 #include <unistd.h>
 #include <cstdio>
@@ -16,7 +19,7 @@
 #include <algorithm>
 #include <poll.h>
 
-#include "Client.hpp"
+#include "../Client/Client.hpp"
 
 class Server {
 	private:
@@ -37,11 +40,14 @@ class Server {
 		std::map<int, Client *>& getClients() { return clients; }
 		std::vector<Channel*> &getChannel() {return channels;}
 		std::vector<pollfd> &getPoll() { return socket_poll;}
-		Channel &getChannel(string &);
+		Channel &getChannel(std::string &);
 		int createSocket();
 		void startServer(Server &);
-		void newClient();
+		void connectNewClient();
+		void disconnectClient(int sock)
 		void newMessage(int);
-		void notifyAllClients(Channel const *, Client &, string &);
+		void notifyAllClients(Channel const *, Client &);
 		std::string getPassword() { return password;}
 };
+
+#endif
