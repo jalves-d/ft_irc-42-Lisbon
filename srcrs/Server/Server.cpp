@@ -57,12 +57,12 @@ int Server::createSocket()
 	return sock;
 }
 
-void Server::start(Server &server)
+void Server::start()
 {
 	// Structure defined using the server socket file descriptor, POLLIN is used to indicate still having data to read.
-    pollfd server_fd = {server_fd, POLLIN, 0};
+    pollfd server_fd = {this->server_sock, POLLIN, 0};
     this->socket_poll.push_back(server_fd);
-    std::cout << "Server listening on port: " << port << std::endl;
+    std::cout << "Server listening on port: " << this->port << std::endl;
     while (true)
     {
 		// Waiting until there is something on the poll
@@ -90,7 +90,7 @@ void Server::start(Server &server)
             if ((it->revents &POLLHUP) == POLLHUP)
 			{
                 std::cout << "client disconneted" << std::endl;
-                disconnectClient(it->fd);
+                disconnectClient(it->fd, getClient(), "client disconected");
                 break;
             }
         }
@@ -143,16 +143,14 @@ void Server::newMessage(int sock_fd)
     Cmd cmd(temp, getClient());
 }
 
-void Server::disconnectClient(int sock)
+void Server::disconnectClient(int sock, Client *client, std::string msg)
 {
-    Client *client;
     std::vector<std::string> userChannels;
     std::vector<Channel*> serverChannels;
     Server::poll_iterator it;
     Server::channel_iterator ch_it;
     Channel::channellUsersIt tic;
 
-    client = (getClients())[sock];
     if (client != NULL)
 	{
         userChannels = client->getChannels();
@@ -169,7 +167,7 @@ void Server::disconnectClient(int sock)
 			{
                 if (std::find(userChannels.begin(), userChannels.end(), (*ch_it)->channelName) != userChannels.end())
 				{
-                    notifyAllClients((*ch_it), *client);
+                    notifyAllClients((*ch_it), *client, msg);
                     for(tic = (*ch_it)->channelUsers.begin(); tic != (*ch_it)->channelUsers.end(); tic++)
 					{
                         if (client->nickname == (*tic).first->nickname)
@@ -183,7 +181,7 @@ void Server::disconnectClient(int sock)
     }
 }
 
-void Server::notifyAllClients(Channel const *channel, Client &client)
+void Server::notifyAllClients(Channel const *channel, Client &client, std::string msg)
 {
     std::map<Client*, int> users;
     Channel::channellUsersIt it;
@@ -194,7 +192,7 @@ void Server::notifyAllClients(Channel const *channel, Client &client)
 	{
         if ((it)->first->nickname != client.nickname)
 		{
-            message = "* " + client.nickname + " has quit (client disconneted)\r\n";
+            message = "* " + client.nickname + " has quit (" + msg +")\r\n";
             (it)->first->write(message);
         }
     }

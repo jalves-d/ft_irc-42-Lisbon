@@ -44,11 +44,11 @@ class Server {
 		std::vector<pollfd> &getPoll() { return socket_poll;}
 		Channel &getChannel(std::string &);
 		int createSocket();
-		void startServer(Server &);
+		void start();
 		void connectNewClient();
-		void disconnectClient(int sock);
+		void disconnectClient(int sock, Client *client, std::string msg);
 		void newMessage(int);
-		void notifyAllClients(Channel const *, Client &);
+		void notifyAllClients(Channel const *channel, Client &client, std::string msg);
 		std::string getPassword() { return password;}
 };
 

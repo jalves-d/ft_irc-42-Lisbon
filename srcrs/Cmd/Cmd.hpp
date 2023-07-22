@@ -21,6 +21,7 @@ class Cmd {
 		void invite(std::vector<std::string>&, Client &, Server&);
 		void topic(std::vector<std::string> &, Client &, Server &);
 		void mode(std::vector<std::string>&, Client &, Server &);
+		void quit(std::string&, Client&, Server&);
 };
 
 #endif

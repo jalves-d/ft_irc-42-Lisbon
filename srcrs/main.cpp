@@ -16,5 +16,5 @@ int main(int argc, char **argv)
 		exit(-1);
 	}
 	Server server(std::atoi(argv[1]), argv[2]);
-	server.start(server);
+	server.start();
 }
