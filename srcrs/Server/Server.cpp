@@ -140,8 +140,8 @@ void Server::newMessage(int sock_fd)
     }
 	if (temp.length() < 3)
         return;
-    Cmd cmd(temp);
-    cmd.parse(*this);
+    Cmd cmd(temp, *this->clients.find(*this->temp_fd)->second);
+    
 }
 
 void Server::disconnectClient(int sock)
