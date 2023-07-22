@@ -20,6 +20,8 @@
 #include <poll.h>
 
 #include "../Client/Client.hpp"
+#include "../Cmd/Cmd.hpp"
+#include "../Channel/Channel.hpp"
 
 class Server {
 	private:
@@ -34,7 +36,7 @@ class Server {
 		typedef std::vector<Channel*>::iterator channel_iterator;
 		typedef std::vector<pollfd>::iterator poll_iterator;
 		typedef std::map<int, Client*>::iterator client_iterator;
-		Server(const char *port, const char *password);
+		Server(int port, const char *password);
 		~Server();
 		Client *getClient() {return clients[temp_fd];}
 		std::map<int, Client *>& getClients() { return clients; }
@@ -44,7 +46,7 @@ class Server {
 		int createSocket();
 		void startServer(Server &);
 		void connectNewClient();
-		void disconnectClient(int sock)
+		void disconnectClient(int sock);
 		void newMessage(int);
 		void notifyAllClients(Channel const *, Client &);
 		std::string getPassword() { return password;}

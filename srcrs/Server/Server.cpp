@@ -1,6 +1,6 @@
 #include "Server.hpp"
 
-Server::Server(int *port, const char *password)
+Server::Server(int port, const char *password)
 {
 	this->port = port;
 	this->password = password;
@@ -23,7 +23,7 @@ int Server::createSocket()
 	//setting the options to socket use the level specified to TCP comunicate using SOL_SOCKET.
 	//SO_REUSEADDR is used to bind() be allowed to reuse local addresses.
 	int options = 1;
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)))
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &options, sizeof(options)))
 	{
 		std::cout << "Socket options setting failed!";
 		exit(-1);
@@ -45,13 +45,13 @@ int Server::createSocket()
 	//Traditionally, this operation is called "assigning a name to a socket".
 	if (bind(sock, (struct sockaddr *)&server, sizeof(server)) < 0)
     {
-        cout << "Binding socket operation failed!" << endl;
+        std::cout << "Binding socket operation failed!" << std::endl;
         exit(-1);
     }
 	//Marking socket in connection-mode, specifying the socket as argument, as accepting connections.
 	if (listen(sock, 100) < 0)
     {
-        cout << "Listening on socket failed!." << endl;
+        std::cout << "Listening on socket failed!." << std::endl;
         exit(-1);
     }
 	return sock;
@@ -60,7 +60,7 @@ int Server::createSocket()
 void Server::start(Server &server)
 {
 	// Structure defined using the server socket file descriptor, POLLIN is used to indicate still having data to read.
-    pollfd server_fd = {server_sock, POLLIN, 0};
+    pollfd server_fd = {server_fd, POLLIN, 0};
     this->socket_poll.push_back(server_fd);
     std::cout << "Server listening on port: " << port << std::endl;
     while (true)
@@ -126,7 +126,7 @@ void Server::connectNewClient()
 
 void Server::newMessage(int sock_fd)
 {
-    string temp;
+    std::string temp;
     char buffer[1000];
     this->temp_fd = sock_fd;
     while (true)
@@ -140,15 +140,14 @@ void Server::newMessage(int sock_fd)
     }
 	if (temp.length() < 3)
         return;
-    Cmd cmd(temp);
-    cmd.parse(*this);
+    Cmd cmd(temp, getClient());
 }
 
 void Server::disconnectClient(int sock)
 {
     Client *client;
-    vector<string> userChannels;
-    vector<Channel*> serverChannels;
+    std::vector<std::string> userChannels;
+    std::vector<Channel*> serverChannels;
     Server::poll_iterator it;
     Server::channel_iterator ch_it;
     Channel::channellUsersIt tic;
@@ -190,7 +189,7 @@ void Server::notifyAllClients(Channel const *channel, Client &client)
     Channel::channellUsersIt it;
     std::string message;
 
-    users = channel->users;
+    users = channel->channelUsers;
     for (it = users.begin(); it != users.end(); it++)
 	{
         if ((it)->first->nickname != client.nickname)

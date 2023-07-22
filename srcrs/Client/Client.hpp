@@ -21,13 +21,13 @@
 
 class Client {
     public:
-        string nickname;
-        string username;
-        string password;
-        vector<string> channels;
+        std::string nickname;
+        std::string username;
+        std::string password;
+        std::vector<std::string> channels;
         int mod;
         int sock_fd;
-		int available;
+		int avail;
         int flag;
 
         Client();

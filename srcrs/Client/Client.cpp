@@ -5,7 +5,7 @@ Client::Client() {}
 Client::Client(int fd)
 {
     this->sock_fd = fd;
-    this->available = 0;
+    this->avail = 0;
 }
 
 Client::Client(Client const &clt)
@@ -20,7 +20,7 @@ Client &Client::operator=(Client const &clt)
     return (*this);
 }
 
-int Client::available() { return available; }
+int Client::available() { return avail; }
 
 std::string Client::getPrefix() const
 {
