@@ -7,24 +7,29 @@
 # include "../Client/Client.hpp"
 # include "../Channel/Channel.hpp"
 
-class Server;
 
 class Cmd {
     private:
-		Client user;
-        std::string command;
+		bool invalid;
+		std::string cmd;
+		std::string arg;
+		std::string usr;
+		bool got_user;
+		//Client user;
+        //std::string command;
     public:
 		Cmd();
-		Cmd(const char *);
-        Cmd(std::string &);
 		~Cmd();
 
 		//Channel Commands
-		void cmd_picker(std::string);
-		void kick(std::vector<std::string> &, Client &, Server &);
+		Cmd cmd_picker(std::string message);
+
+
+
+		/*void kick(std::vector<std::string> &, Client &, Server &);
 		void invite(std::vector<std::string>&, Client &, Server&);
 		void topic(std::vector<std::string> &, Client &, Server &);
-		void mode(std::vector<std::string>&, Client &, Server &);
+		void mode(std::vector<std::string>&, Client &, Server &);*/
 };
 
 #endif
