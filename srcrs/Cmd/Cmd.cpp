@@ -13,3 +13,11 @@ Cmd::Cmd(string &cmd)
 }
 
 Cmd::~Cmd() {}
+
+
+void quit(std::string str, Client &client, Server &server)
+{
+    server.disconnectClient(client.sock_fd, &client, str);
+}
+
+void kick()
