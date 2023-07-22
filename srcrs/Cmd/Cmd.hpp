@@ -1,27 +1,35 @@
 #ifndef CMD_HPP
 # define CMD_HPP
 
-#include "../Server/Server.hpp"
-#include "../Client/Client.hpp"
-#include "../Channel/Channel.hpp"
+# include "string.h"
 
-class Server;
+# include "../Server/Server.hpp"
+# include "../Client/Client.hpp"
+# include "../Channel/Channel.hpp"
+
 
 class Cmd {
     private:
-        std::string command;
+		bool invalid;
+		std::string cmd;
+		std::string arg;
+		std::string usr;
+		bool got_user;
+		//Client user;
+        //std::string command;
     public:
 		Cmd();
-		Cmd(const char *);
-        Cmd(std::string &);
 		~Cmd();
 
 		//Channel Commands
-		void kick(std::vector<std::string> &, Client &, Server &);
+		Cmd cmd_picker(std::string message);
+
+
+
+		/*void kick(std::vector<std::string> &, Client &, Server &);
 		void invite(std::vector<std::string>&, Client &, Server&);
 		void topic(std::vector<std::string> &, Client &, Server &);
-		void mode(std::vector<std::string>&, Client &, Server &);
-		void quit(std::string&, Client&, Server&);
+		void mode(std::vector<std::string>&, Client &, Server &);*/
 };
 
 #endif
