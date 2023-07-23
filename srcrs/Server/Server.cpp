@@ -141,7 +141,7 @@ void Server::newMessage(int sock_fd)
 	if (temp.length() < 3)
         return;
     Cmd cmd(temp, *this->clients.find(*this->temp_fd)->second);
-    
+
     Cmd cmd(temp, getClient());
 }
 
@@ -156,7 +156,7 @@ void Server::disconnectClient(int sock, Client *client, std::string msg)
     if (client != NULL)
 	{
         userChannels = client->getChannels();
-        serverChannels = getChannel();
+        serverChannels = getChannels();
         for(it = getPoll().begin(); it != getPoll().end(); it++)
 		{
             if (it->fd == sock)
@@ -183,6 +183,8 @@ void Server::disconnectClient(int sock, Client *client, std::string msg)
     }
 }
 
+
+
 void Server::notifyAllClients(Channel const *channel, Client &client, std::string msg)
 {
     std::map<Client*, int> users;
@@ -198,4 +200,52 @@ void Server::notifyAllClients(Channel const *channel, Client &client, std::strin
             (it)->first->write(message);
         }
     }
+}
+
+Channel &Server::getChannel(string &channelSName)
+{
+    unsigned long i;
+
+    for (i = 0; i < channels.size(); i++) {
+        if (channels[i]->channelName == channelSName)
+            return *channels[i];
+    }
+    return(*channels[i]);
+}
+
+void Server::kick(std::string cmd, Client &client)
+{
+	std::stringstream cmds(cmd);
+	std::string move;
+	Channel *channel;
+	Channel::channellUsersIt    it;
+
+	cmds >> move;
+	channel = getChannel(move);
+	if (channel == null)
+	{
+		std::cout << "Invalid channel Name!" << std::endl;
+		return;
+	}
+	else if (!verifyAdminPrivilege(client->nickname))
+	{
+		std::cout << "You dont have privileges to do this operation!" << std:endl;
+		return;
+	}
+	else
+	{
+		cmds >> move;
+		for(it = (*channel)->channelUsers.begin(); it != (*channel)->channelUsers.end(); it++)
+		{
+            if (move == (*it).first->nickName)
+			{
+				(*channel)->kickedUsers.insert(move);
+                (*channel)->channelUsers.erase(it);
+				for(it = (*channel)->channelUsers.begin(); it != (*channel)->channelUsers.end(); it++)
+        			(*it).first->write(":" + client.nickName + " KICK " + channel->channelName + " " + move + " :" + "KICKED\r\n");
+				return;
+            }
+		}
+	}
+	std::cout << "Has no user using this nickname on the channel!" << std:endl;
 }

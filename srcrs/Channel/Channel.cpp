@@ -26,3 +26,18 @@ Channel &Channel::operator=(Channel const &channel)
 }
 
 Channel::~Channel() {}
+
+bool Channel::verifyAdminPrivilege(std::string clientNick)
+{
+	std::map<Client*, int> users;
+    Channel::channellUsersIt it;
+    std::string message;
+
+    users = this->admin;
+    for (it = users.begin(); it != users.end(); it++)
+	{
+        if ((it)->first->nickname != clientNick)
+			return true;
+    }
+	return false;
+}

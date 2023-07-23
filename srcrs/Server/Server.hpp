@@ -40,7 +40,7 @@ class Server {
 		~Server();
 		Client *getClient() {return clients[temp_fd];}
 		std::map<int, Client *>& getClients() { return clients; }
-		std::vector<Channel*> &getChannel() {return channels;}
+		std::vector<Channel*> &getChannels() {return channels;}
 		std::vector<pollfd> &getPoll() { return socket_poll;}
 		Channel &getChannel(std::string &);
 		int createSocket();

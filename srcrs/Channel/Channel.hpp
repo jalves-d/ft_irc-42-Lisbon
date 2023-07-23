@@ -20,6 +20,7 @@ class Channel {
 		Channel();
 		Channel(std::string, Client&);
 		~Channel();
+		bool verifyAdminPrivilege(std::string clientNick);
 };
 
 #endif
