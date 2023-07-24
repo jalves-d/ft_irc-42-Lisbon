@@ -50,6 +50,10 @@ class Server {
 		void newMessage(int);
 		void notifyAllClients(Channel const *channel, Client &client, std::string msg);
 		std::string getPassword() { return password;}
+		int verifyUserInChannel(std::string move, Channel &channel);
+		void Server::invite(std::string cmd, Client &client);
+		void Server::kick(std::string cmd, Client &client);
+		void Server::topic(std::string cmd, Client &client);
 };
 
 #endif

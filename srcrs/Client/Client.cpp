@@ -41,3 +41,17 @@ std::vector<std::string> &Client::getChannels()
 {
     return channels;
 }
+
+void Client::replaceChannelTopic(std::string old, std::string ncha)
+{
+	std:string it;
+
+	for (it = this->channels.begin(); it != this->channels.end(); it++)
+	{
+		if (it == old)
+		{
+			it = ncha;
+			return;
+		}
+	}
+}

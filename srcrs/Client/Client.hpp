@@ -40,6 +40,7 @@ class Client {
         std::string getPrefix() const;
 		int available();
         std::vector<std::string> &getChannels();
+		void Client::replaceChannelTopic(std::string old, std::string ncha);
 };
 
 #endif

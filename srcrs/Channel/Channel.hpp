@@ -21,6 +21,7 @@ class Channel {
 		Channel(std::string, Client&);
 		~Channel();
 		bool verifyAdminPrivilege(std::string clientNick);
+		void setChannel(std::string topic) { this->topic = topic;}
 };
 
 #endif
