@@ -4,52 +4,70 @@ Cmd::Cmd() {}
 
 Cmd::~Cmd() {}
 
-//function that takes the string sent by the client and seperates it into its parts and selects what funtions to call based on that
-Cmd Cmd::cmd_picker(std::string message){
-    Cmd request;
-    int i = 0;
-    int j = 0;
-    request.got_user = false;
-    std::stringstream stream(message);
-    std::string word;
-    if (message[i]  == ' ' || !message[i])
-    {
-        request.invalid = true;
-        return (request);
-    }
-    
-    stream >> word;
-    if (!word[0])
-    {
-        request.invalid = true;
-        return (request);
-    }
-    if (word[0] == ':')
-    {
-        if(word[1] == ' ' || word[1] == 0)
-        {
-            request.invalid = true;
-            return (request);
-        }
-        request.got_user =  true;
-        request.usr = word;
+//function that takes the string sent by the client and seperates it into its parts
+void Cmd::cmd_picker(std::string message){
+
+    std::vector<std::string> words;
+    this->got_prefix =  false;
+    int end = message.find(' ');
+    if (end == 0){
+        this->invalid = true;
+        return;
     }
 
-    if (request.got_user)
-    {
-        stream >> word;
-        if (!word[0])
-        {
-        request.invalid = true;
-        return (request);
+    while (end != -1){
+        words.push_back(message.substr(0, end));
+        message.erase(message.begin(), message.begin() + end + 1);
+        end = message.find(' ');
+    }
+    words.push_back(message.substr(0, end));
+    int i = 0;
+
+    if (words[i][0] == ':'){
+        if (words[i][1] == ' ' || words [i][1] == 0){
+            this->invalid = true;
+            return;
         }
+        this->got_prefix = true;
+        this->prefix = words[i];
+        i++;
     }
-    request.cmd = word;
-    while (stream >> word);
+
+    if (!words[i][0]){
+        this->invalid = true;
+        return;
+    }
+    this->command = words[i];
+    i++;
+    while (i <= 1 + words.size())
     {
-        request.arg = request.arg + ' ' + word;
+        this->params = this->params + ' ' + words[i];
+        i++;
     }
-    request.invalid = false;
-    return(request);
+    this->invalid = false;
+    this->params.erase(this->params.begin(), this->params.begin() + 1);
+
+} 
+
+
+std::string Cmd::get_command(void)
+{
+    return(this->command);
 }
+std::string Cmd::get_params(void){
+    return(this->params);
+}
+
+std::string Cmd::get_prefix(void){
+    return(this->prefix);
+}
+
+bool Cmd::get_got_prefix(void){
+    return(this->got_prefix);
+}
+
+bool Cmd::get_invalid(void){
+    return(this->invalid);
+}
+
 
