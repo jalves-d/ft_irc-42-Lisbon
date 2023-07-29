@@ -8,7 +8,6 @@ class Client;
 class Channel {
     public:
         std::string channelName;
-		std::pair<Client *, int> admin;
         std::map<Client *, int> channelUsers;
 		std::vector<std::string> kickedUsers;
 		std::string topic;

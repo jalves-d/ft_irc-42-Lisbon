@@ -8,7 +8,6 @@ Channel::Channel()
 
 Channel::Channel(std::string name, Client &admin)
 {
-    this->admin = std::make_pair(&admin, 1);
     this->channelName = name;
     channelUsers.insert(std::make_pair(&admin, 1));
 }
@@ -29,14 +28,9 @@ Channel::~Channel() {}
 
 bool Channel::verifyAdminPrivilege(std::string clientNick)
 {
-	std::map<Client*, int> users;
-    Channel::channellUsersIt it;
-    std::string message;
-
-    users = this->admin;
-    for (it = users.begin(); it != users.end(); it++)
+    for (channellUsersIt it = this->channelUsers.begin(); it != this->channelUsers.end(); it++)
 	{
-        if ((it)->first->nickname != clientNick)
+        if ((it)->first->nickname == clientNick && (it)->second == 1)
 			return true;
     }
 	return false;

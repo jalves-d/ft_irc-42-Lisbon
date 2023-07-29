@@ -200,7 +200,7 @@ void Server::notifyAllClients(Channel const *channel, Client &client, std::strin
     }
 }
 
-Channel &Server::getChannel(string &channelSName)
+Channel &Server::getChannel(std::string &channelSName)
 {
     unsigned long i;
 
@@ -219,41 +219,41 @@ void Server::kick(std::string cmd, Client &client)
 	Channel::channellUsersIt    it;
 
 	cmds >> move;
-	channel = getChannel(move);
-	if (channel == null)
+	*channel = getChannel(move);
+	if (channel == NULL)
 	{
 		std::cout << "Invalid channel Name!" << std::endl;
 		return;
 	}
-	else if (!channel.verifyAdminPrivilege(client->nickname))
+	else if (!channel->verifyAdminPrivilege(client.nickname))
 	{
-		std::cout << "You dont have privileges to do this operation!" << std:endl;
+		std::cout << "You dont have privileges to do this operation!" << std::endl;
 		return;
 	}
 	else
 	{
 		cmds >> move;
-		for(it = (*channel)->channelUsers.begin(); it != (*channel)->channelUsers.end(); it++)
+		for(it = channel->channelUsers.begin(); it != channel->channelUsers.end(); it++)
 		{
-            if (move == (*it).first->nickName)
+            if (move == (*it).first->nickname)
 			{
-				(*channel)->kickedUsers.insert(move);
-                (*channel)->channelUsers.erase(it);
-				for(it = (*channel)->channelUsers.begin(); it != (*channel)->channelUsers.end(); it++)
-        			(*it).first->write(":" + client.nickName + " KICK " + channel->channelName + " " + move + " :" + "KICKED\r\n");
+				channel->kickedUsers.push_back(move);
+                channel->channelUsers.erase(it);
+				for(it = channel->channelUsers.begin(); it != channel->channelUsers.end(); it++)
+        			(*it).first->write(":" + (&client)->nickname + " KICK " + channel->channelName + " " + move + " :" + "KICKED\r\n");
 				return;
             }
 		}
 	}
-	std::cout << "Has no user using this nickname on the channel!" << std:endl;
+	std::cout << "Has no user using this nickname on the channel!" << std::endl;
 }
 
 int verifyUserInChannel(std::string move, Channel &channel)
 {
 	Channel::channellUsersIt    it;
-	for(it = (*channel)->channelUsers.begin(); it != (*channel)->channelUsers.end(); it++)
+	for(it = (&channel)->channelUsers.begin(); it != (&channel)->channelUsers.end(); it++)
 	{
-        if (move == (*it).first->nickName)
+        if (move == (*it).first->nickname)
 			return 1;
 	}
 }
@@ -268,15 +268,15 @@ void Server::invite(std::string cmd, Client &client)
 	std::map<int, Client*> serverCli = getClients();
 
 	cmds >> move;
-	channel = getChannel(move);
-	if (channel == null)
+	*channel = getChannel(move);
+	if (channel == NULL)
 	{
 		std::cout << "Invalid channel Name!" << std::endl;
 		return;
 	}
-	else if (!channel.verifyAdminPrivilege(client->nickname))
+	else if (!channel->verifyAdminPrivilege((&client)->nickname))
 	{
-		std::cout << "You dont have privileges to do this operation!" << std:endl;
+		std::cout << "You dont have privileges to do this operation!" << std::endl;
 		return;
 	}
 	else
@@ -284,22 +284,22 @@ void Server::invite(std::string cmd, Client &client)
 		cmds >> move;
 		for(cit = serverCli.begin(); cit != serverCli.end(); cit++)
 		{
-            if (move == (*cit).second->nickName)
+            if (move == (*cit).second->nickname)
 			{
-				if (verifyUserInChannel(move, channel))
+				if (verifyUserInChannel(move, *channel))
 				{
-					std::cout << "The user is already part of this channel!" << std:endl;
+					std::cout << "The user is already part of this channel!" << std::endl;
 					return;
 				}
-                (*channel)->channelUsers.insert(cit);
-				cit->second->channels.insert(channel);
-				for (it = (*channel)->channelUsers.begin(); it != (*channel)->channelUsers.end(); it++)
-        			(*it).first->write(":" + client.nickName + " INSERT " + channel->channelName + " " + move + " :" + "INSERTED\r\n");
+                channel->channelUsers.insert(std::make_pair((*cit).second, 0));
+				cit->second->channels.push_back(channel->topic);
+				for (it = channel->channelUsers.begin(); it != channel->channelUsers.end(); it++)
+        			(*it).first->write(":" + client.nickname + " INSERT " + channel->channelName + " " + move + " :" + "INSERTED\r\n");
 				return;
             }
 		}
 	}
-	std::cout << "Has no user using this nickname on the server!" << std:endl;
+	std::cout << "Has no user using that nickname on the server!" << std::endl;
 }
 
 void Server::topic(std::string cmd, Client &client)
@@ -311,27 +311,27 @@ void Server::topic(std::string cmd, Client &client)
 	Channel::channellUsersIt    sit;
 
 	cmds >> move;
-	channel = getChannel(move);
-	if (channel == null)
+	*channel = getChannel(move);
+	if (channel == NULL)
 	{
 		std::cout << "Invalid channel Name!" << std::endl;
 		return;
 	}
-	else if (!channel.verifyAdminPrivilege(client->nickname))
+	else if (!channel->verifyAdminPrivilege((&client)->nickname))
 	{
-		std::cout << "You dont have privileges to do this operation!" << std:endl;
+		std::cout << "You dont have privileges to do this operation!" << std::endl;
 		return;
 	}
 	else
 	{
 		cmds >> move;
-		for(it = (*channel)->channelUsers.begin(); it != (*channel)->channelUsers.end(); it++)
+		for(it = channel->channelUsers.begin(); it != channel->channelUsers.end(); it++)
 		{
-			it.replaceChannelTopic(channel->topic, move);
-        	(*it).first->write(":" + client.nickName + " TOPIC " + channel->channelName + " " + move + " :" + "CHANGED\r\n");
+			(*it).first->replaceChannelTopic(channel->topic, move);
+        	(*it).first->write(":" + client.nickname + " TOPIC " + channel->channelName + " " + move + " :" + "CHANGED\r\n");
 			channel->setChannel(move);
 			return;
 		}
 	}
-	std::cout << "Has no user using this nickname on the channel!" << std:endl;
+	std::cout << "Has no user using this nickname on the channel!" << std::endl;
 }
