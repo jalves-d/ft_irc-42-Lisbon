@@ -327,11 +327,51 @@ void Server::topic(std::string cmd, Client &client)
 		cmds >> move;
 		for(it = channel->channelUsers.begin(); it != channel->channelUsers.end(); it++)
 		{
+			//Atualizar isso, setChannel atualizada, adicionar uma string temporaria.
 			(*it).first->replaceChannelTopic(channel->topic, move);
         	(*it).first->write(":" + client.nickname + " TOPIC " + channel->channelName + " " + move + " :" + "CHANGED\r\n");
-			channel->setChannel(move);
-			return;
+			if (channel->setChannel(move, (*this)))
+				return;
 		}
+	}
+	std::cout << "Has no user using this nickname on the channel!" << std::endl;
+}
+
+void Server::mode(std::string cmd, Client &client)
+{
+	std::stringstream cmds(cmd);
+	std::string move;
+	std::string mode;
+	Channel *channel;
+	Channel::channellUsersIt    it;
+	Channel::channellUsersIt    sit;
+
+	cmds >> mode;
+	cmds >> move;
+	*channel = getChannel(move);
+	if (channel == NULL)
+	{
+		std::cout << "Invalid channel Name!" << std::endl;
+		return;
+	}
+	else if (!channel->verifyAdminPrivilege((&client)->nickname))
+	{
+		std::cout << "You dont have privileges to do this operation!" << std::endl;
+		return;
+	}
+	else
+	{
+		cmds >> move;
+		if (mode.compare("o") == 0)
+
+		if (mode.compare("i") == 0)
+
+		if (mode.compare("t") == 0)
+
+		if (mode.compare("k") == 0)
+
+		if (mode.compare("l") == 0)
+		
 	}
 	std::cout << "Has no user using this nickname on the channel!" << std::endl;
 }

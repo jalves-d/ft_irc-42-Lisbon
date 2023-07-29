@@ -54,6 +54,7 @@ class Server {
 		void Server::invite(std::string cmd, Client &client);
 		void Server::kick(std::string cmd, Client &client);
 		void Server::topic(std::string cmd, Client &client);
+		void Server::mode(std::string cmd, Client &client);
 };
 
 #endif
