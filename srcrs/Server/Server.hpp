@@ -20,7 +20,7 @@
 #include <poll.h>
 
 #include "../Client/Client.hpp"
-#include "../Cmd/Cmd.hpp"
+#include "../Message/Message.hpp"
 #include "../Channel/Channel.hpp"
 
 class Server {

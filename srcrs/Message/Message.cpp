@@ -1,11 +1,11 @@
-#include "Cmd.hpp"
+#include "Message.hpp"
 
-Cmd::Cmd() {}
+Message::Message() {}
 
-Cmd::~Cmd() {}
+Message::~Message() {}
 
 //function that takes the string sent by the client and seperates it into its parts
-void Cmd::cmd_picker(std::string message){
+void Message::Message_picker(std::string message){
 
     std::vector<std::string> words;
     this->got_prefix =  false;
@@ -50,23 +50,23 @@ void Cmd::cmd_picker(std::string message){
 } 
 
 
-std::string Cmd::get_command(void)
+std::string Message::get_command(void)
 {
     return(this->command);
 }
-std::string Cmd::get_params(void){
+std::string Message::get_params(void){
     return(this->params);
 }
 
-std::string Cmd::get_prefix(void){
+std::string Message::get_prefix(void){
     return(this->prefix);
 }
 
-bool Cmd::get_got_prefix(void){
+bool Message::get_got_prefix(void){
     return(this->got_prefix);
 }
 
-bool Cmd::get_invalid(void){
+bool Message::get_invalid(void){
     return(this->invalid);
 }
 
