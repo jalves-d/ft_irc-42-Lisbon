@@ -6,12 +6,6 @@
 # include <iostream>
 # include <vector>
 
-
-//# include "../Server/Server.hpp"
-//# include "../Client/Client.hpp"
-//# include "../Channel/Channel.hpp"
-
-
 class Cmd {
     private:
 		bool invalid;
