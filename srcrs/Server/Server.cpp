@@ -235,12 +235,13 @@ void Server::kick(std::string cmd, Client &client)
 		cmds >> move;
 		for(it = channel->channelUsers.begin(); it != channel->channelUsers.end(); it++)
 		{
-            if (move == (*it).first->nickname)
+            if (move == (*it).first->username)
 			{
-				channel->kickedUsers.push_back(move);
+				channel->kickedUsers.push_back((*it).first->nickname);
                 channel->channelUsers.erase(it);
 				for(it = channel->channelUsers.begin(); it != channel->channelUsers.end(); it++)
         			(*it).first->write(":" + (&client)->nickname + " KICK " + channel->channelName + " " + move + " :" + "KICKED\r\n");
+					//if necessary change move to nickname
 				return;
             }
 		}
@@ -262,11 +263,13 @@ void Server::invite(std::string cmd, Client &client)
 {
 	std::stringstream cmds(cmd);
 	std::string move;
+	std::string usnickname;
 	Channel *channel;
 	Channel::channellUsersIt    it;
 	Server::client_iterator cit;
 	std::map<int, Client*> serverCli = getClients();
 
+	cmds >> usnickname;
 	cmds >> move;
 	*channel = getChannel(move);
 	if (channel == NULL)
@@ -281,12 +284,11 @@ void Server::invite(std::string cmd, Client &client)
 	}
 	else
 	{
-		cmds >> move;
 		for(cit = serverCli.begin(); cit != serverCli.end(); cit++)
 		{
-            if (move == (*cit).second->nickname)
+            if (usnickname == (*cit).second->nickname)
 			{
-				if (verifyUserInChannel(move, *channel))
+				if (verifyUserInChannel(usnickname, *channel))
 				{
 					std::cout << "The user is already part of this channel!" << std::endl;
 					return;
@@ -294,7 +296,7 @@ void Server::invite(std::string cmd, Client &client)
                 channel->channelUsers.insert(std::make_pair((*cit).second, 0));
 				cit->second->channels.push_back(channel->topic);
 				for (it = channel->channelUsers.begin(); it != channel->channelUsers.end(); it++)
-        			(*it).first->write(":" + client.nickname + " INSERT " + channel->channelName + " " + move + " :" + "INSERTED\r\n");
+        			(*it).first->write(":" + client.nickname + " INSERT " + channel->channelName + " " + usnickname + " :" + "INSERTED\r\n");
 				return;
             }
 		}
@@ -371,7 +373,7 @@ void Server::mode(std::string cmd, Client &client)
 		if (mode.compare("k") == 0)
 
 		if (mode.compare("l") == 0)
-		
+
 	}
 	std::cout << "Has no user using this nickname on the channel!" << std::endl;
 }
