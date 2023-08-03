@@ -293,6 +293,7 @@ void Server::invite(std::string cmd, Client &client)
 					std::cout << "The user is already part of this channel!" << std::endl;
 					return;
 				}
+				channel->removeUserFromKickedList(usnickname);
                 channel->channelUsers.insert(std::make_pair((*cit).second, 0));
 				cit->second->channels.push_back(channel->topic);
 				for (it = channel->channelUsers.begin(); it != channel->channelUsers.end(); it++)
@@ -319,7 +320,12 @@ void Server::topic(std::string cmd, Client &client)
 		std::cout << "Invalid channel Name!" << std::endl;
 		return;
 	}
-	else if (!channel->verifyAdminPrivilege((&client)->nickname))
+	else if (!channel->verifyUserInChannel((&client)->nickname))
+	{
+		std::cout << "You aren't a member of this channel!" << std::endl;
+		return;
+	}
+	else if (channel->adminOnlyTopic == true && !channel->verifyAdminPrivilege((&client)->nickname))
 	{
 		std::cout << "You dont have privileges to do this operation!" << std::endl;
 		return;
@@ -365,15 +371,20 @@ void Server::mode(std::string cmd, Client &client)
 	{
 		cmds >> move;
 		if (mode.compare("o") == 0)
-
+			//if(channel->changeAdminPrivilege())else;
 		if (mode.compare("i") == 0)
-
+			//channel->changeInviteOnly();
 		if (mode.compare("t") == 0)
-
+			//channel->changeAOT();
 		if (mode.compare("k") == 0)
-
+			//channel->setPassword(newpass or null);
 		if (mode.compare("l") == 0)
-
+			//channel->setUsersLimit(newLimit or -1);
 	}
 	std::cout << "Has no user using this nickname on the channel!" << std::endl;
+}
+
+void Server::join(std::string cmd, Client &client)
+{
+
 }
