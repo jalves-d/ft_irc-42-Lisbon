@@ -1,4 +1,4 @@
-#include "Server.hpp"
+#include "Server/Server.hpp"
 #include <iostream>
 #include <csignal>
 
