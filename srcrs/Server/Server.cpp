@@ -141,8 +141,33 @@ void Server::newMessage(int sock_fd)
     }
 	if (temp.length() < 3)
         return;
-    Message message = new Message();
-    Message_picker(temp, getClient(sock_fd));
+    Message message = Message();
+    message.Message_picker(temp);
+	executeCommands(message);
+}
+
+void Server::executeCommands(Message &message)
+{
+	Client *client = getClient();
+
+	if (message.get_command().compare("JOIN") == 0)
+		join(message.get_params(), *client);
+	if (message.get_command().compare("LIST") == 0)
+		list(message.get_params(), *client);
+	if (message.get_command().compare("KICK") == 0)
+		kick(message.get_params(), *client);
+	if (message.get_command().compare("INVITE") == 0)
+		invite(message.get_params(), *client);
+	if (message.get_command().compare("MODE") == 0)
+		mode(message.get_params(), *client);
+	if (message.get_command().compare("TOPIC") == 0)
+		topic(message.get_params(), *client);
+	if (message.get_command().compare("NICK") == 0)
+		nick(message.get_params(), *client);
+	if (message.get_command().compare("QUIT") == 0)
+		quit(message.get_params(), *client);
+	if (message.get_command().compare("PRIVMSG") == 0)
+		privmsg(message.get_params(), *client);
 }
 
 void Server::disconnectClient(int sock, Client *client, std::string msg)
@@ -395,26 +420,50 @@ void Server::mode(std::string cmd, Client &client)
 	std::cout << "Has no user using this nickname on the channel!" << std::endl;
 }
 
+void Server::list(std::string cmd, Client &client)
+{
+	std::vector<Channel*> schannels = getChannels();
+	channel_iterator cit;
+	int cont = 0;
+	client.write("Channel list:\n");
+	if (cmd.empty())
+	{
+		for (cit = schannels.begin(); cit != schannels.end(); cit++)
+		{
+			cont++;
+			client.write((*cit)->channelName + std::to_string(cont) + " (" + std::to_string((*cit)->channelUsers.size()) + ") - Topic: " + (*cit)->topic + "\n");
+		}
+	}
+	else
+	{
+		std::stringstream cmds(cmd);
+		std::string move;
+		cmds >> move;
+		for (cit = schannels.begin(); cit != schannels.end(); cit++)
+		{
+			cont++;
+			if ((*cit)->channelName.find(move) != std::string::npos)
+				client.write((*cit)->channelName + std::to_string(cont) + " (" + std::to_string((*cit)->channelUsers.size()) + ") - Topic: " + (*cit)->topic + "\n");
+		}
+	}
+}
+
 void Server::join(std::string cmd, Client &client)
 {
 
 }
 
-void Server::list(Client &client)
+void Server::nick(std::string cmd, Client &client)
 {
-	std::vector<Channel*> schannels = getChannels();
-	channel_iterator cit;
-	int cont = 0;
 
-	client.write("Channel list:\n");
-	for (cit = schannels.begin(); cit != schannels.end(); cit++)
-	{
-		cont++;
-		client.write("#channel" + std::to_string(cont) + " (" + std::to_string((*cit)->channelUsers.size()) + ") - Topic: " + (*cit)->topic + "\n");
-	}
 }
 
-void Server::nick(std::string cmd, Client &client)
+void Server::quit(std::string cmd, Client &client)
+{
+
+}
+
+void Server::privmsg(std::string cmd, Client &client)
 {
 
 }

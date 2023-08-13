@@ -18,7 +18,7 @@ class Message {
     public:
 		Message();
 		~Message();	
-		void Message_picker(std::string message, Client &client);
+		void Message_picker(std::string message);
 		std::string get_command(void);
 		std::string get_params(void);
 		std::string get_prefix(void);

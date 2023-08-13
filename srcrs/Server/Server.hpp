@@ -50,6 +50,7 @@ class Server {
 		void newMessage(int);
 		void notifyAllClients(Channel const *channel, Client &client, std::string msg);
 		std::string getPassword() { return password;}
+		void executeCommands(Message &message);
 		int verifyUserInChannel(std::string move, Channel &channel);
 		void invite(std::string cmd, Client &client);
 		void kick(std::string cmd, Client &client);
@@ -57,7 +58,9 @@ class Server {
 		void mode(std::string cmd, Client &client);
 		void join(std::string cmd, Client &client);
 		void nick(std::string cmd, Client &client);
-		void list(Client &client);
+		void list(std::string cmd, Client &client);
+		void quit(std::string cmd, Client &client);
+		void privmsg(std::string cmd, Client &client);
 };
 
 #endif
