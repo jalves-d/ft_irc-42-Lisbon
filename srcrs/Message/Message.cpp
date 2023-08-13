@@ -5,7 +5,7 @@ Message::Message() {}
 Message::~Message() {}
 
 //function that takes the string sent by the client and seperates it into its parts
-void Message::Message_picker(std::string message){
+void Message::Message_picker(std::string message, Client &client){
 
     std::vector<std::string> words;
     this->got_prefix =  false;

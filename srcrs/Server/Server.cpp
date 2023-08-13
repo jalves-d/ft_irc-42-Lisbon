@@ -1,4 +1,5 @@
 #include "Server.hpp"
+#include "Message.hpp"
 
 Server::Server(int port, const char *password)
 {
@@ -140,9 +141,8 @@ void Server::newMessage(int sock_fd)
     }
 	if (temp.length() < 3)
         return;
-    Cmd cmd(temp, *this->clients.find(*this->temp_fd)->second);
-
-    Cmd cmd(temp, getClient());
+    Message message = new Message();
+    Message_picker(temp, getClient(sock_fd));
 }
 
 void Server::disconnectClient(int sock, Client *client, std::string msg)
@@ -237,7 +237,6 @@ void Server::kick(std::string cmd, Client &client)
 		{
             if (move == (*it).first->username)
 			{
-				channel->kickedUsers.push_back((*it).first->nickname);
                 channel->channelUsers.erase(it);
 				for(it = channel->channelUsers.begin(); it != channel->channelUsers.end(); it++)
         			(*it).first->write(":" + (&client)->nickname + " KICK " + channel->channelName + " " + move + " :" + "KICKED\r\n");
@@ -293,9 +292,7 @@ void Server::invite(std::string cmd, Client &client)
 					std::cout << "The user is already part of this channel!" << std::endl;
 					return;
 				}
-				channel->removeUserFromKickedList(usnickname);
                 channel->channelUsers.insert(std::make_pair((*cit).second, 0));
-				cit->second->channels.push_back(channel->topic);
 				for (it = channel->channelUsers.begin(); it != channel->channelUsers.end(); it++)
         			(*it).first->write(":" + client.nickname + " INSERT " + channel->channelName + " " + usnickname + " :" + "INSERTED\r\n");
 				return;
@@ -336,7 +333,6 @@ void Server::topic(std::string cmd, Client &client)
 		for(it = channel->channelUsers.begin(); it != channel->channelUsers.end(); it++)
 		{
 			//Atualizar isso, setChannel atualizada, adicionar uma string temporaria.
-			(*it).first->replaceChannelTopic(channel->topic, move);
         	(*it).first->write(":" + client.nickname + " TOPIC " + channel->channelName + " " + move + " :" + "CHANGED\r\n");
 			if (channel->setChannel(move, (*this)))
 				return;

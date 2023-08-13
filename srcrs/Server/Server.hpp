@@ -57,7 +57,6 @@ class Server {
 		void mode(std::string cmd, Client &client);
 		void join(std::string cmd, Client &client);
 		void nick(std::string cmd, Client &client);
-		void oper(std::string cmd, Client &client);
 		void list(Client &client);
 };
 

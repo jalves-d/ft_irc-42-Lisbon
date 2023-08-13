@@ -11,13 +11,12 @@ class Channel
     public:
         std::string channelName;
         std::map<Client *, int> channelUsers;
-		std::vector<std::string> kickedUsers;
 		std::string topic;
         std::string password;
-		bool adminOnlyTopic = false;
+		bool adminOnlyTopic;
 		typedef std::map<Client *, int>::iterator channellUsersIt;
 		int usersLimit;
-		bool inviteOnly = false;
+		bool inviteOnly;
 
 		Channel(Channel const&);
 		Channel &operator=(Channel const &channel);
@@ -32,7 +31,6 @@ class Channel
 		bool removeUsersLimit(){ this->usersLimit = -1; };
 		void setPassword( std::string pass ){ this->password = pass;}
 		void changeAOT(){ this->adminOnlyTopic = (this->adminOnlyTopic == false) ? true : false;}
-		void removeUserFromKickedList(std::string clientNick);
 		void changeInviteOnly(){ this->inviteOnly = (this->inviteOnly == false) ? true : false;}
 };
 

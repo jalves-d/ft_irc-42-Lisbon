@@ -23,8 +23,6 @@ class Client {
     public:
         std::string nickname;
         std::string username;
-        std::string password;
-        std::vector<std::string> channels;
         int mod;
         int sock_fd;
 		int avail;
@@ -40,7 +38,6 @@ class Client {
         std::string getPrefix() const;
 		int available();
         std::vector<std::string> &getChannels();
-		void Client::replaceChannelTopic(std::string old, std::string ncha);
 };
 
 #endif

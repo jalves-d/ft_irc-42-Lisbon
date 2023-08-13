@@ -2,9 +2,6 @@
 
 Channel::Channel()
 {
-	this->channelName = "defaultChannel";
-	this->password = "";
-    this->usersLimit = 10;
 }
 
 Channel::Channel(std::string name, Client &admin)
@@ -13,6 +10,8 @@ Channel::Channel(std::string name, Client &admin)
     channelUsers.insert(std::make_pair(&admin, 1));
     this->usersLimit = 10;
     this->password = "";
+    this->adminOnlyTopic = false;
+    this->inviteOnly = false;
 }
 
 Channel::Channel(Channel const &channel)
@@ -37,15 +36,6 @@ bool Channel::verifyAdminPrivilege(std::string clientNick)
 			return true;
     }
 	return false;
-}
-
-void Channel::removeUserFromKickedList(std::string clientNick)
-{
-    for (std::vector<std::string>::iterator it = this->kickedUsers.begin(); it != this->kickedUsers.begin(); ++it)
-    {
-        if (*it == clientNick)
-			this->kickedUsers.erase(it);  
-    }
 }
 
 bool Channel::verifyUserInChannel(std::string clientNick)
