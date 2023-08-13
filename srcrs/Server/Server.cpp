@@ -349,12 +349,10 @@ void Server::mode(std::string cmd, Client &client)
 {
 	std::stringstream cmds(cmd);
 	std::string move;
-	std::string mode;
 	Channel *channel;
 	Channel::channellUsersIt    it;
 	Channel::channellUsersIt    sit;
 
-	cmds >> mode;
 	cmds >> move;
 	*channel = getChannel(move);
 	if (channel == NULL)
@@ -370,21 +368,57 @@ void Server::mode(std::string cmd, Client &client)
 	else
 	{
 		cmds >> move;
-		if (mode.compare("o") == 0)
-			//if(channel->changeAdminPrivilege())else;
-		if (mode.compare("i") == 0)
-			//channel->changeInviteOnly();
-		if (mode.compare("t") == 0)
-			//channel->changeAOT();
-		if (mode.compare("k") == 0)
-			//channel->setPassword(newpass or null);
-		if (mode.compare("l") == 0)
-			//channel->setUsersLimit(newLimit or -1);
+		while (!cmds.eof())
+		{
+			int i = 0;
+			int mode = -1;
+			while (move[i])
+			{
+				if (move[i] == '+')
+					mode = 0;
+				if (move[i] == '-')
+					mode = 1;
+				if (move[i] == 'o')
+					//if(channel->changeAdminPrivilege())else;
+				if (move[i] == 'i')
+					//channel->changeInviteOnly();
+				if (move[i] == 't')
+					//channel->changeAOT();
+				if (move[i] == 'k' && mode == 0)
+					channel->setPassword("");
+				if (move[i] == 'k' && mode == 1)
+					channel->setPassword(NULL);
+				if (move[i] == 'l' && mode == 1)
+					channel->setUsersLimit(-1);
+				if (move[i] == 'l' && mode == 0)
+					channel->setUsersLimit(14);
+			}
+			cmds >> move;
+		}
 	}
 	std::cout << "Has no user using this nickname on the channel!" << std::endl;
 }
 
 void Server::join(std::string cmd, Client &client)
+{
+
+}
+
+void Server::list(Client &client)
+{
+	std::vector<Channel*> schannels = getChannels();
+	channel_iterator cit;
+	int cont = 0;
+
+	client.write("Channel list:\n");
+	for (cit = schannels.begin(); cit != schannels.end(); cit++)
+	{
+		cont++;
+		client.write("#channel" + std::to_string(cont) + " (" + std::to_string((*cit)->channelUsers.size()) + ") - Topic: " + (*cit)->topic + "\n");
+	}
+}
+
+void Server::nick(std::string cmd, Client &client)
 {
 
 }

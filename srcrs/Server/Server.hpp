@@ -51,10 +51,14 @@ class Server {
 		void notifyAllClients(Channel const *channel, Client &client, std::string msg);
 		std::string getPassword() { return password;}
 		int verifyUserInChannel(std::string move, Channel &channel);
-		void Server::invite(std::string cmd, Client &client);
-		void Server::kick(std::string cmd, Client &client);
-		void Server::topic(std::string cmd, Client &client);
-		void Server::mode(std::string cmd, Client &client);
+		void invite(std::string cmd, Client &client);
+		void kick(std::string cmd, Client &client);
+		void topic(std::string cmd, Client &client);
+		void mode(std::string cmd, Client &client);
+		void join(std::string cmd, Client &client);
+		void nick(std::string cmd, Client &client);
+		void oper(std::string cmd, Client &client);
+		void list(Client &client);
 };
 
 #endif
