@@ -1,23 +1,26 @@
 #ifndef CLIENT_HPP
 # define CLIENT_HPP
 
-#include <iostream>
-#include <unistd.h>
-#include <string.h>
-#include <vector>
-#include <map>
-#include <sys/poll.h>
-#include <netdb.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <algorithm>
-#include <sstream>
-#include <poll.h>
-#include <cstdio>
-#include <functional>
-#include <cctype>
-#include <locale>
+# include <iostream>
+# include <unistd.h>
+# include <string.h>
+# include <vector>
+# include <map>
+# include <sys/poll.h>
+# include <netdb.h>
+# include <sys/socket.h>
+# include <arpa/inet.h>
+# include <fcntl.h>
+# include <algorithm>
+# include <sstream>
+# include <poll.h>
+# include <cstdio>
+# include <functional>
+# include <cctype>
+# include <locale>
+
+# include "../Server/Server.hpp"
+
 
 class Client {
     public:

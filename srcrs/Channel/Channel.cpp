@@ -68,7 +68,7 @@ bool Channel::changeAdminPrivilege(std::string clientNick)
 
 bool Channel::setChannel(std::string topic, Server &server)
 {
-    Channel *nullChannel;
+    Channel *nullChannel = NULL;
 
     *nullChannel = server.getChannel(topic);
     if (nullChannel == NULL)
@@ -81,7 +81,7 @@ bool Channel::setChannel(std::string topic, Server &server)
 
 bool Channel::setUsersLimit(int limit)
 {
-    if (limit > 0 && limit >= this->channelUsers.size())
+    if (limit > 0 && (unsigned)limit >= this->channelUsers.size())
     {
         this->usersLimit = limit;
         return true;

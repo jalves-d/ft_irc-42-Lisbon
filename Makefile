@@ -1,3 +1,5 @@
+# Makefile for your C++ project
+
 # Compiler and compilation flags
 CXX = g++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98

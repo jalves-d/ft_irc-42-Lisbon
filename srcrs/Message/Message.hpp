@@ -5,7 +5,10 @@
 # include <sstream>
 # include <iostream>
 # include <vector>
-# include "Client/Client.hpp"
+# include "../Client/Client.hpp"
+# include "../Channel/Channel.hpp"
+# include "../Server/Server.hpp"
+
 
 class Message {
     private:

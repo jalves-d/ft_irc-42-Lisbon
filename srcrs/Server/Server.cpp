@@ -1,5 +1,4 @@
 #include "Server.hpp"
-#include "Message.hpp"
 
 Server::Server(int port, const char *password)
 {
@@ -198,8 +197,8 @@ void Server::disconnectClient(int sock, Client *client, std::string msg)
                     for(tic = (*ch_it)->channelUsers.begin(); tic != (*ch_it)->channelUsers.end(); tic++)
 					{
                         if (client->nickname == (*tic).first->nickname)
-                            (*ch_it)->channelUsers.erase(tic);
-                            return;
+                            {(*ch_it)->channelUsers.erase(tic);
+                            return;}
                     }
                 }
             }
@@ -240,11 +239,17 @@ void Server::kick(std::string cmd, Client &client)
 {
 	std::stringstream cmds(cmd);
 	std::string move;
-	Channel *channel;
+	Channel *channel = NULL;
 	Channel::channellUsersIt    it;
 
 	cmds >> move;
-	*channel = getChannel(move);
+	if (move.empty())
+	{
+		std::cout << "Invalid channel Name!" << std::endl;
+		return;
+	}
+	else
+		*channel = getChannel(move);
 	if (channel == NULL)
 	{
 		std::cout << "Invalid channel Name!" << std::endl;
@@ -281,6 +286,7 @@ int verifyUserInChannel(std::string move, Channel &channel)
         if (move == (*it).first->nickname)
 			return 1;
 	}
+	return 0;
 }
 
 void Server::invite(std::string cmd, Client &client)
@@ -288,14 +294,20 @@ void Server::invite(std::string cmd, Client &client)
 	std::stringstream cmds(cmd);
 	std::string move;
 	std::string usnickname;
-	Channel *channel;
+	Channel *channel = NULL;
 	Channel::channellUsersIt    it;
 	Server::client_iterator cit;
 	std::map<int, Client*> serverCli = getClients();
 
 	cmds >> usnickname;
 	cmds >> move;
-	*channel = getChannel(move);
+	if (move.empty())
+	{
+		std::cout << "Invalid channel Name!" << std::endl;
+		return;
+	}
+	else
+		*channel = getChannel(move);
 	if (channel == NULL)
 	{
 		std::cout << "Invalid channel Name!" << std::endl;
@@ -331,12 +343,18 @@ void Server::topic(std::string cmd, Client &client)
 {
 	std::stringstream cmds(cmd);
 	std::string move;
-	Channel *channel;
+	Channel *channel = NULL;
 	Channel::channellUsersIt    it;
 	Channel::channellUsersIt    sit;
 
 	cmds >> move;
-	*channel = getChannel(move);
+	if (move.empty())
+	{
+		std::cout << "Invalid channel Name!" << std::endl;
+		return;
+	}
+	else
+		*channel = getChannel(move);
 	if (channel == NULL)
 	{
 		std::cout << "Invalid channel Name!" << std::endl;
@@ -370,12 +388,18 @@ void Server::mode(std::string cmd, Client &client)
 {
 	std::stringstream cmds(cmd);
 	std::string move;
-	Channel *channel;
+	Channel *channel = NULL;
 	Channel::channellUsersIt    it;
 	Channel::channellUsersIt    sit;
 
 	cmds >> move;
-	*channel = getChannel(move);
+	if (move.empty())
+	{
+		std::cout << "Invalid channel Name!" << std::endl;
+		return;
+	}
+	else
+		*channel = getChannel(move);
 	if (channel == NULL)
 	{
 		std::cout << "Invalid channel Name!" << std::endl;
@@ -431,7 +455,7 @@ void Server::list(std::string cmd, Client &client)
 		for (cit = schannels.begin(); cit != schannels.end(); cit++)
 		{
 			cont++;
-			client.write((*cit)->channelName + std::to_string(cont) + " (" + std::to_string((*cit)->channelUsers.size()) + ") - Topic: " + (*cit)->topic + "\n");
+			client.write((*cit)->channelName + to_string(cont) + " (" + to_string((*cit)->channelUsers.size()) + ") - Topic: " + (*cit)->topic + "\n");
 		}
 	}
 	else
@@ -443,27 +467,31 @@ void Server::list(std::string cmd, Client &client)
 		{
 			cont++;
 			if ((*cit)->channelName.find(move) != std::string::npos)
-				client.write((*cit)->channelName + std::to_string(cont) + " (" + std::to_string((*cit)->channelUsers.size()) + ") - Topic: " + (*cit)->topic + "\n");
+				client.write((*cit)->channelName + to_string(cont) + " (" + to_string((*cit)->channelUsers.size()) + ") - Topic: " + (*cit)->topic + "\n");
 		}
 	}
 }
 
 void Server::join(std::string cmd, Client &client)
 {
-
+	(void)cmd;
+	(void)client;
 }
 
 void Server::nick(std::string cmd, Client &client)
 {
-
+	(void)cmd;
+	(void)client;
 }
 
 void Server::quit(std::string cmd, Client &client)
 {
-
+	(void)cmd;
+	(void)client;
 }
 
 void Server::privmsg(std::string cmd, Client &client)
 {
-
+	(void)cmd;
+	(void)client;
 }

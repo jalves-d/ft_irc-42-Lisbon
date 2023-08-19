@@ -1,10 +1,12 @@
 #ifndef CHANNEL_HPP
 # define CHANNEL_HPP
 
-#include "../Client/Client.hpp"
-#include "../Server/Server.hpp"
+# include "../Client/Client.hpp"
+# include "../Server/Server.hpp"
+
 
 class Client;
+class Server; 
 
 class Channel
 {
@@ -28,10 +30,10 @@ class Channel
 		bool changeAdminPrivilege(std::string clientNick);
 		bool setChannel(std::string topic, Server &server);
 		bool setUsersLimit(int limit);
-		bool removeUsersLimit(){ this->usersLimit = -1; };
-		void setPassword( std::string pass ){ this->password = pass;}
-		void changeAOT(){ this->adminOnlyTopic = (this->adminOnlyTopic == false) ? true : false;}
-		void changeInviteOnly(){ this->inviteOnly = (this->inviteOnly == false) ? true : false;}
+		bool removeUsersLimit();//{ this->usersLimit = -1; };
+		void setPassword( std::string pass ){ this->password = pass;};
+		void changeAOT(){ this->adminOnlyTopic = (this->adminOnlyTopic == false) ? true : false;};
+		void changeInviteOnly(){ this->inviteOnly = (this->inviteOnly == false) ? true : false;};
 };
 
 #endif

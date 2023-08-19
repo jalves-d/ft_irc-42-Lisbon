@@ -21,7 +21,7 @@ void Message::Message_picker(std::string message){
         end = message.find(' ');
     }
     words.push_back(message.substr(0, end));
-    int i = 0;
+    unsigned int i = 0;
 
     if (words[i][0] == ':'){
         if (words[i][1] == ' ' || words [i][1] == 0){

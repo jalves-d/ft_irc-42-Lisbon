@@ -39,5 +39,6 @@ void Client::write(const std::string &msg)
 
 std::vector<std::string> &Client::getChannels()
 {
-    return channels;
+    std::vector<std::string> *channels = NULL;
+    return *channels;
 }

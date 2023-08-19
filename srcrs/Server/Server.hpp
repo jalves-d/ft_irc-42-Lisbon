@@ -1,27 +1,31 @@
 #ifndef SERVER_HPP
 # define SERVER_HPP
 
-#include <iostream>
-#include <unistd.h>
-#include <cstdio>
-#include <string.h>
-#include <vector>
-#include <map>
-#include <csignal>
-#include <sstream>
-#include <functional>
-#include <cctype>
-#include <locale>
-#include <netdb.h>
-#include <sys/poll.h>
-#include <sys/socket.h>
-#include <fcntl.h>
-#include <algorithm>
-#include <poll.h>
+# include <iostream>
+# include <unistd.h>
+# include <cstdio>
+# include <string.h>
+# include <vector>
+# include <map>
+# include <csignal>
+# include <sstream>
+# include <functional>
+# include <cctype>
+# include <locale>
+# include <netdb.h>
+# include <sys/poll.h>
+# include <sys/socket.h>
+# include <fcntl.h>
+# include <algorithm>
+# include <poll.h>
 
-#include "../Client/Client.hpp"
-#include "../Message/Message.hpp"
-#include "../Channel/Channel.hpp"
+# include "../Client/Client.hpp"
+# include "../Channel/Channel.hpp"
+# include "../Message/Message.hpp"
+# include "../utils.hpp"
+class Client;
+class Channel;
+class Message;
 
 class Server {
 	private:
