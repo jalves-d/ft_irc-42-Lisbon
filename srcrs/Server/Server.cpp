@@ -495,3 +495,9 @@ void Server::privmsg(std::string cmd, Client &client)
 	(void)cmd;
 	(void)client;
 }
+
+int Server::verifyUserInChannel(std::string move, Channel &channel){
+	(void)move;
+	(void)channel;
+	return 0;
+}
