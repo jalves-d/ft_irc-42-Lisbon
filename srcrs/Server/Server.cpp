@@ -83,8 +83,13 @@ void Server::start()
                     connectNewClient();
                     break;
                 }
-                newMessage(it->fd);
-            }
+                if (newMessage(it->fd) == 0)
+				{
+					//std::cout << "Client disconnected" << std::endl;
+					//disconnectClient(it->fd, getClient(), "client disconected");
+					break;
+				}
+			}
 			//This event indicates that the peer closed its end of the channel. Subsequent reads from the channel will return 0
 			// only after all outstanding data in the channel has been consumed.
             if ((it->revents &POLLHUP) == POLLHUP)
@@ -118,13 +123,13 @@ void Server::connectNewClient()
     pollfd new_fd = {clientId, POLLIN, 0};
     socket_poll.push_back(new_fd);
     Client *newClient = new Client(clientId);
-    std::string str = ":Welcome to ft_irc server!\r\nPlease enter the password: \r\n";
+    std::string str = ":ft_irc 101 Welcome to ft_irc server!\r\n";
 	newClient->flag = 1;
     newClient->write(str);
     clients.insert(std::make_pair(clientId, newClient));
 }
 
-void Server::newMessage(int sock_fd)
+int Server::newMessage(int sock_fd)
 {
     std::string temp;
     char buffer[1000];
@@ -139,34 +144,45 @@ void Server::newMessage(int sock_fd)
             break;
     }
 	if (temp.length() < 3)
-        return;
+        return 0;
     Message message = Message();
+	std::cout << temp << std::endl;
     message.Message_picker(temp);
-	executeCommands(message);
+	if (!message.get_invalid())
+		{executeCommands(message);
+		return 1;}
+	else
+		std::cout << "Invalid message!" << std::endl;
+	return 0;
 }
 
 void Server::executeCommands(Message &message)
 {
+	
 	Client *client = getClient();
-
-	if (message.get_command().compare("JOIN") == 0)
+	std::string msg = message.get_command();
+	std::cout << "Command: " << msg << std::endl;
+	std::cout << "Compare: JOIN " << msg.compare("JOIN") << std::endl;
+	if (msg.compare("JOIN") == 0)
 		join(message.get_params(), *client);
-	if (message.get_command().compare("LIST") == 0)
+	else if (msg.compare("LIST") == 0)
 		list(message.get_params(), *client);
-	if (message.get_command().compare("KICK") == 0)
+	else if (msg.compare("KICK") == 0)
 		kick(message.get_params(), *client);
-	if (message.get_command().compare("INVITE") == 0)
+	else if (msg.compare("INVITE") == 0)
 		invite(message.get_params(), *client);
-	if (message.get_command().compare("MODE") == 0)
+	else if (msg.compare("MODE") == 0)
 		mode(message.get_params(), *client);
-	if (message.get_command().compare("TOPIC") == 0)
+	else if (msg.compare("TOPIC") == 0)
 		topic(message.get_params(), *client);
-	if (message.get_command().compare("NICK") == 0)
+	else if (msg.compare("NICK") == 0)
 		nick(message.get_params(), *client);
-	if (message.get_command().compare("QUIT") == 0)
+	else if (msg.compare("QUIT") == 0)
 		quit(message.get_params(), *client);
-	if (message.get_command().compare("PRIVMSG") == 0)
+	else if (msg.compare("PRIVMSG") == 0)
 		privmsg(message.get_params(), *client);
+	else 
+		std::cout << "Command invalid" << std::endl;
 }
 
 void Server::disconnectClient(int sock, Client *client, std::string msg)

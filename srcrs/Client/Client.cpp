@@ -6,6 +6,7 @@ Client::Client(int fd)
 {
     this->sock_fd = fd;
     this->avail = 0;
+    std::cout << "New client created. FD: " << fd << std::endl;
 }
 
 Client::Client(Client const &clt)
