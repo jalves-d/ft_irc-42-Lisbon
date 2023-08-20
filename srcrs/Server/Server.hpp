@@ -51,7 +51,7 @@ class Server {
 		void start();
 		void connectNewClient();
 		void disconnectClient(int sock, Client *client, std::string msg);
-		void newMessage(int);
+		int newMessage(int);
 		void notifyAllClients(Channel const *channel, Client &client, std::string msg);
 		std::string getPassword() { return password;}
 		void executeCommands(Message &message);
