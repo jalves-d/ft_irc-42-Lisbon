@@ -118,7 +118,7 @@ void Server::connectNewClient()
     pollfd new_fd = {clientId, POLLIN, 0};
     socket_poll.push_back(new_fd);
     Client *newClient = new Client(clientId);
-    std::string str = ":Welcome to ft_irc server!\r\nPlease enter the password: \r\n";
+    std::string str = ":ft_irc 101 Welcome to ft_irc server!\r\n";
 	newClient->flag = 1;
     newClient->write(str);
     clients.insert(std::make_pair(clientId, newClient));
@@ -141,6 +141,7 @@ void Server::newMessage(int sock_fd)
 	if (temp.length() < 3)
         return;
     Message message = Message();
+	std::cout << temp << std::endl;
     message.Message_picker(temp);
 	executeCommands(message);
 }
