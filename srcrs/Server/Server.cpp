@@ -158,7 +158,7 @@ int Server::newMessage(int sock_fd)
 
 void Server::executeCommands(Message &message)
 {
-	
+
 	Client *client = getClient();
 	std::string msg = message.get_command();
 	std::cout << "Command: " << msg << std::endl;
@@ -181,7 +181,7 @@ void Server::executeCommands(Message &message)
 		quit(message.get_params(), *client);
 	else if (msg.compare("PRIVMSG") == 0)
 		privmsg(message.get_params(), *client);
-	else 
+	else
 		std::cout << "Command invalid" << std::endl;
 }
 
@@ -493,8 +493,6 @@ void Server::join(std::string cmd, Client &client)
 	std::stringstream cmds(cmd);
 	std::string move;
 	Channel *channel = NULL;
-	Channel::channellUsersIt    it;
-	Channel::channellUsersIt    sit;
 
 	cmds >> move;
 	if (move.empty())
@@ -528,13 +526,38 @@ void Server::join(std::string cmd, Client &client)
 		std::cout << "Client joined the channel!" << std::endl;
 		return;
 	}
+	//implement notify all clients in channel
 	std::cout << "Incorrect Password !" << std::endl;
 }
 
 void Server::nick(std::string cmd, Client &client)
 {
-	(void)cmd;
-	(void)client;
+	std::stringstream cmds(cmd);
+	std::string move;
+	Server::client_iterator cit;
+	std::map<int, Client*> serverCli = getClients();
+
+	cmds >> move;
+	if (move == NULL)
+	{
+		std::cout << "No nickname provided!" << std::endl;
+		return;
+	}
+	if (client.nickname.compare(move) == 0)
+	{
+		std::cout << "The nickname provided is already your current nickname!" << std::endl;
+		return;
+	}
+	for(cit = serverCli.begin(); cit != serverCli.end(); cit++)
+	{
+        if (usnickname == (*cit).second->nickname)
+		{
+			std::cout << "The nickname provided is already in use!" << std::endl;
+			return;
+		}
+	}
+	client.nickname = move;
+	std::cout << "Your new nickname is " + move << std::endl;
 }
 
 void Server::quit(std::string cmd, Client &client)
@@ -547,10 +570,4 @@ void Server::privmsg(std::string cmd, Client &client)
 {
 	(void)cmd;
 	(void)client;
-}
-
-int Server::verifyUserInChannel(std::string move, Channel &channel){
-	(void)move;
-	(void)channel;
-	return 0;
 }

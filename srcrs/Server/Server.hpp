@@ -55,7 +55,6 @@ class Server {
 		void notifyAllClients(Channel const *channel, Client &client, std::string msg);
 		std::string getPassword() { return password;}
 		void executeCommands(Message &message);
-		int verifyUserInChannel(std::string move, Channel &channel);
 		void invite(std::string cmd, Client &client);
 		void kick(std::string cmd, Client &client);
 		void topic(std::string cmd, Client &client);
