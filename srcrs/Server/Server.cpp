@@ -474,8 +474,45 @@ void Server::list(std::string cmd, Client &client)
 
 void Server::join(std::string cmd, Client &client)
 {
-	(void)cmd;
-	(void)client;
+	std::stringstream cmds(cmd);
+	std::string move;
+	Channel *channel = NULL;
+	Channel::channellUsersIt    it;
+	Channel::channellUsersIt    sit;
+
+	cmds >> move;
+	if (move.empty())
+	{
+		std::cout << "Invalid channel Name!" << std::endl;
+		return;
+	}
+	else
+		*channel = getChannel(move);
+	if (channel == NULL)
+	{
+		*channel = new Channel(move, client);
+		this->channels.insert(channel);
+		std::cout << "New Channel Created!" << std::endl;
+		return;
+	}
+	else if (channel->verifyUserInChannel((&client)->nickname))
+	{
+		std::cout << "You are already a member of this channel!" << std::endl;
+		return;
+	}
+	else if (channel->inviteOnly)
+	{
+		std::cout << "This channel is set as invite only!" << std::endl;
+		return;
+	}
+	cmds >> move;
+	if (channel->password == move)
+	{
+		channel->channelUsers.insert(client, 1);
+		std::cout << "Client joined the channel!" << std::endl;
+		return;
+	}
+	std::cout << "Incorrect Password !" << std::endl;
 }
 
 void Server::nick(std::string cmd, Client &client)
