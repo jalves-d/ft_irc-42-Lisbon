@@ -428,34 +428,57 @@ void Server::mode(std::string cmd, Client &client)
 	}
 	else
 	{
+		std::string more;
 		cmds >> move;
-		while (!cmds.eof())
+		if (move.empty())
 		{
-			int i = 0;
-			int mode = -1;
-			while (move[i])
-			{
-				if (move[i] == '+')
-					mode = 0;
-				if (move[i] == '-')
-					mode = 1;
-				if (move[i] == 'o')
-					//if(channel->changeAdminPrivilege())else;
-				if (move[i] == 'i')
-					//channel->changeInviteOnly();
-				if (move[i] == 't')
-					//channel->changeAOT();
-				if (move[i] == 'k' && mode == 0)
-					channel->setPassword("");
-				if (move[i] == 'k' && mode == 1)
-					channel->setPassword(NULL);
-				if (move[i] == 'l' && mode == 1)
-					channel->setUsersLimit(-1);
-				if (move[i] == 'l' && mode == 0)
-					channel->setUsersLimit(14);
-			}
-			cmds >> move;
+			std::cout << "Missing flags on command MODE!"<<std::endl;
+			return;
 		}
+		cmds >> more;
+		if (!more.empty() && !(move[1].c_str() == 'o' || move[1].c_str() == 'l' || move[1].c_str() == 'k'))
+		{
+			std::cout << "Too many arguments you just can set one include or one exclude per command!"<<std::endl;
+			return;
+		}
+		if (more.empty() && (move[1].c_str() == 'o' || move[1].c_str() == 'l' || move[1].c_str() == 'k'))
+		{
+			std::cout << "Missing argument after flag!"<<std::endl;
+			return;
+		}
+		int i = 1;
+		int mode = -1;
+		if (move.c_str()[0] == '+')
+				mode = 0;
+		else if (move.c_str()[0] == '-')
+				mode = 1;
+		else
+		{
+			std::cout << "Missing flags on command MODE!"<<std::endl;
+			return;
+		}
+		if (move.c_str()[1] == 'o' && mode == 0)
+			channel->changeAdminPrivilege(more, true);
+		else if (move.c_str()[1] == 'o' && mode == 1)
+			channel->changeAdminPrivilege(more, false);
+		else if (move.c_str()[1] == 'i' && mode == 0)
+			channel->changeInviteOnly(true);
+		else if (move.c_str()[1] == 'i' && mode == 1)
+			channel->changeInviteOnly(false);
+		else if (move.c_str()[1] == 't' && mode == 0)
+			channel->changeAOT(true);
+		else if (move.c_str()[1] == 't' && mode == 1)
+			channel->changeAOT(false);
+		else if (move.c_str()[1] == 'k' && mode == 0)
+			channel->setPassword(more);
+		else if (move.c_str()[1] == 'k' && mode == 1)
+			channel->setPassword(NULL);
+		else if (move.c_str()[1] == 'l' && mode == 1)
+			channel->setUsersLimit(-1); //error verification need to be implemented
+		else if (move.c_str()[1] == 'l' && mode == 0)
+			channel->setUsersLimit(std::atoi(more.c_str()));
+		std::cout << "Mode set with success!" << std::endl;
+		return;
 	}
 	std::cout << "Has no user using this nickname on the channel!" << std::endl;
 }

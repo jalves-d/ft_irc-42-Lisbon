@@ -48,16 +48,16 @@ bool Channel::verifyUserInChannel(std::string clientNick)
 	return false;
 }
 
-bool Channel::changeAdminPrivilege(std::string clientNick)
+bool Channel::changeAdminPrivilege(std::string clientNick, bool ad)
 {
 	for (channellUsersIt it = this->channelUsers.begin(); it != this->channelUsers.end(); it++)
 	{
-        if ((it)->first->nickname == clientNick && (it)->second == 1)
+        if ((it)->first->nickname == clientNick && ad == false)
 		{
 			(it)->second = 0;
 			return true;
 		}
-		else if((it)->first->nickname == clientNick && (it)->second == 0)
+		else if((it)->first->nickname == clientNick && ad == true)
 		{
 			(it)->second = 1;
 			return true;

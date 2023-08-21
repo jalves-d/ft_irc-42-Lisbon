@@ -6,7 +6,7 @@
 
 
 class Client;
-class Server; 
+class Server;
 
 class Channel
 {
@@ -27,13 +27,12 @@ class Channel
 		~Channel();
 		bool verifyAdminPrivilege(std::string clientNick);
 		bool verifyUserInChannel(std::string clientNick);
-		bool changeAdminPrivilege(std::string clientNick);
+		bool changeAdminPrivilege(std::string clientNick, bool ad);
 		bool setChannel(std::string topic, Server &server);
 		bool setUsersLimit(int limit);
-		bool removeUsersLimit();//{ this->usersLimit = -1; };
 		void setPassword( std::string pass ){ this->password = pass;};
-		void changeAOT(){ this->adminOnlyTopic = (this->adminOnlyTopic == false) ? true : false;};
-		void changeInviteOnly(){ this->inviteOnly = (this->inviteOnly == false) ? true : false;};
+		void changeAOT(bool ad){ this->adminOnlyTopic = ad};
+		void changeInviteOnly(bool ad){ this->inviteOnly = ad};
 };
 
 #endif
