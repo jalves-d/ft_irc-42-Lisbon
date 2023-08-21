@@ -1,0 +1,3 @@
+sudo lsof -i :6667
+
+kill -9 11924

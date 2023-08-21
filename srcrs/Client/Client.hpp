@@ -36,6 +36,8 @@ class Client {
         Client(Client const&);
         ~Client();
 
+        int get_fd() const;
+
         Client &operator=(Client const &clt);
         void write(const std::string &);
         std::string getPrefix() const;

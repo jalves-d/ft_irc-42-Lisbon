@@ -11,7 +11,12 @@ Client::Client(int fd)
 
 Client::Client(Client const &clt)
 {
-    *this = clt;
+    this->sock_fd = clt.sock_fd;
+    this->nickname = clt.nickname;
+    this->username = clt.username;
+    this->mod = clt.mod;
+    this->avail = clt.avail;
+    this->flag = clt.flag;
 }
 
 Client &Client::operator=(Client const &clt)
@@ -43,3 +48,9 @@ std::vector<std::string> &Client::getChannels()
     std::vector<std::string> *channels = NULL;
     return *channels;
 }
+
+
+int Client::get_fd() const
+{
+    return (this->sock_fd);
+}   

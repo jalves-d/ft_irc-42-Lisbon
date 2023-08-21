@@ -1,19 +1,25 @@
 #include "Message.hpp"
 
-Message::Message() {}
+Message::Message() {
+    this->invalid = true;
+    this->got_prefix = false;
+    this->command = "";
+    this->params = "";
+    this->prefix = "";
+}
 
 Message::~Message() {}
 
+Message::Message(Message const &src){
+    *this = src;
+}
 //function that takes the string sent by the client and seperates it into its parts
 void Message::Message_picker(std::string message){
 
-    std::cout << "Message: " << message << std::endl; //debugging
     std::vector<std::string> words;
     this->got_prefix =  false;
     int end = message.find(' ');
-    std::cout << "end: " << end << std::endl; //debugging
     if (end <= 0){
-         std::cout << "Message: " << message << ": is invalid"<<std::endl; //debugging
         this->invalid = true;
         return;
     }
@@ -22,8 +28,6 @@ void Message::Message_picker(std::string message){
         words.push_back(message.substr(0, end));
         message.erase(message.begin(), message.begin() + end + 1);
         end = message.find(' ');
-        std::cout << "aqui Message: " << message << std::endl; //debugging
-        std::cout << "end: " << end << std::endl; //debugging
     }
     words.push_back(message.substr(0, end));
     unsigned int i = 0;

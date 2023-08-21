@@ -5,8 +5,6 @@
 # include <sstream>
 # include <iostream>
 # include <vector>
-# include "../Client/Client.hpp"
-# include "../Channel/Channel.hpp"
 # include "../Server/Server.hpp"
 
 
@@ -20,6 +18,7 @@ class Message {
 
     public:
 		Message();
+		Message(Message const &src);
 		~Message();	
 		void Message_picker(std::string message);
 		std::string get_command(void);
