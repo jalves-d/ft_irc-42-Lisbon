@@ -585,8 +585,44 @@ void Server::nick(std::string cmd, Client &client)
 
 void Server::quit(std::string cmd, Client &client)
 {
-	(void)cmd;
-	(void)client;
+	std::stringstream cmds(cmd);
+	std::string move;
+	Channel *channel = NULL;
+	Channel::channellUsersIt    it;
+
+	cmds >> move;
+	if (move.empty())
+	{
+		std::cout << "Invalid channel Name!" << std::endl;
+		return;
+	}
+	else
+		*channel = getChannel(move);
+	if (channel == NULL)
+	{
+		std::cout << "Invalid channel Name!" << std::endl;
+		return;
+	}
+	else if (!channel->verifyUserInChannel(client.nickname))
+	{
+		std::cout << "You are not a member of this channel!" << std::endl;
+		return;
+	}
+	else
+	{
+		for(it = channel->channelUsers.begin(); it != channel->channelUsers.end(); it++)
+		{
+            if (client.username == (*it).first->username)
+			{
+                channel->channelUsers.erase(it);
+				for(it = channel->channelUsers.begin(); it != channel->channelUsers.end(); it++)
+        			(*it).first->write(":" + (&client)->nickname + " QUIT " + channel->channelName + " " + move + " :" + "QUIT\r\n");
+					//if necessary change move to nickname
+				return;
+            }
+		}
+	}
+	std::cout << "Has no user using this nickname on the channel!" << std::endl;
 }
 
 void Server::privmsg(std::string cmd, Client &client)
