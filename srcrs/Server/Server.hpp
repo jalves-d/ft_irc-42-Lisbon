@@ -17,9 +17,11 @@
 # include <sys/socket.h>
 # include <fcntl.h>
 # include <algorithm>
-# include <poll.h>
-# include <cerrno>
 
+# include <cerrno>
+# include <sys/epoll.h>
+# include <list>
+# include <set>
 
 # include "../Message/Message.hpp"
 # include "../Client/Client.hpp"
@@ -33,10 +35,12 @@ class Server {
 		int				port;
 		int				temp_fd;
 		std::string			password;
+		int epollfd; // Member variable to hold epoll file descriptor
 		std::vector<pollfd>	socket_poll; // Vector to store pollfd structs
 	    std::map<int, std::string> client_buffers; // Map to store client message buffers
 		std::vector<int> sockets_to_close;
-		std::vector<Client> clients;
+		std::list<Client> clients;
+		std::set<int> addedSockets;  // Store added client sockets
 
 	public:
 		typedef std::vector<pollfd>::iterator poll_iterator;
@@ -45,13 +49,11 @@ class Server {
         int createSocket();
 		
 		void start();
-        void connectNewClient();
-		void disconnectClient(int);
+        void newClient(int);
+		void handleDisconnect(int clientSocket);
 		void newMessage(int);
-		Message authMessage(int);
-		Client autenthicateNewClient(int);
-
-		
+		void authMessage(std::string, Client&);
+		void regular_message(std::string, Client&);		
 };
 
 #endif

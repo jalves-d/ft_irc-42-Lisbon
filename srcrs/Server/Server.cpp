@@ -5,265 +5,242 @@ Server::Server(int port, const char *password)
 {
 	this->port = port;
 	this->password = password;
-	this->server_sock = createSocket();
+	epollfd = epoll_create1(0); // Initialize epollfd
+    if (epollfd == -1) {
+        perror("epoll_create1");
+        return;
+    }
 }
 
 Server::~Server() {}
 
-int Server::createSocket()
-{
-	//creating an endpoint for communication, socket() return a filedescriptor.
-	//AF_INET is used to choose THE IPV4 Internet Protocol.
-	//TCP (SOCK_STREAM) is a connection-based protocol. The connection is established and the two parties have a conversation until the connection is terminated by one of the parties or by a network error.
-	int sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (sock < 0)
-	{
-		std::cout << "Socket creation failed!";
-		exit(-1);
-	}
-	//setting the options to socket use the level specified to TCP comunicate using SOL_SOCKET.
-	//SO_REUSEADDR is used to bind() be allowed to reuse local addresses.
-	int options = 1;
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &options, sizeof(options)))
-	{
-		std::cout << "Socket options setting failed!";
-		exit(-1);
-	}
-	//defining I/O operation as non-blocking, in this project is just allowed to use fcntl() using this flags as indicated on the subject.
-	if (fcntl(sock, F_SETFL, O_NONBLOCK) < 0)
-	{
-		std::cout <<"Sokcet flag options setting failed!";
-		exit(-1);
-	}
-	//struct used to handle addresses.
-	struct sockaddr_in server = {};
-	server.sin_family = AF_INET;
-    server.sin_port = htons(this->port);
-	//INADDR_ANY running machine address.
-    server.sin_addr.s_addr = INADDR_ANY;
-    memset(&server.sin_zero, 0, 8);
-	//Assigning the address specified by addr to the socket referred to by the file descriptor. Specifing the size in bytes of the address structure pointed to by addr.
-	//Traditionally, this operation is called "assigning a name to a socket".
-	if (bind(sock, (struct sockaddr *)&server, sizeof(server)) < 0)
-    {
-        std::cout << "Binding socket operation failed!" << std::endl;
+void Server::start() {
+	const int MAX_EVENTS = 100000;
+    int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+    if (serverSocket == -1) {
+        perror("socket");
+
         exit(-1);
     }
-	//Marking socket in connection-mode, specifying the socket as argument, as accepting connections.
-	if (listen(sock, 100) < 0)
-    {
-        std::cout << "Listening on socket failed!." << std::endl;
+    int flags = fcntl(serverSocket, F_GETFL, 0);
+    fcntl(serverSocket, F_SETFL, flags | O_NONBLOCK);
+    struct sockaddr_in serverAddr = {};;
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(port);  // Use the provided port
+    serverAddr.sin_addr.s_addr = INADDR_ANY;
+    
+    if (bind(serverSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == -1) {
+        perror("bind");
+        std::cout << "Port: " << port << std::endl;
+
         exit(-1);
     }
-	return sock;
-}
 
-void Server::start()
-{
-    pollfd server_fd = {this->server_sock, POLLIN, 0};
-    this->socket_poll.push_back(server_fd);
-    std::cout << "Server listening on port: " << this->port << std::endl;
-
-    std::vector<int> sockets_to_close;
-
-    while (true) {
-        if (poll(this->socket_poll.data(), this->socket_poll.size(), -1) < 0) {
-            std::cout << "An error happened while polling!" << std::endl;
-        }
-
-        for (std::vector<pollfd>::iterator it = this->socket_poll.begin(); it != this->socket_poll.end(); ) {
-            if (it->revents == 0) {
-                ++it;
-                continue;
-            }
-
-            //std::cout << "loop it->fd = " << it->fd << std::endl;
-
-            if ((it->revents & POLLHUP) == POLLHUP) {
-                std::cout << "Client disconnected (sock_fd = " << it->fd << ")" << std::endl;
-                close(it->fd); // Close the socket associated with the disconnected client
-				disconnectClient(it->fd);
-                it = this->socket_poll.erase(it); // Remove the pollfd from the vector
-                std::cout << "socketpoll size after delete = " << this->socket_poll.size() << std::endl;
-                continue; // Skip the rest of the loop iteration
-            }
-
-            if ((it->revents & POLLIN) == POLLIN) {
-                if (it->fd == this->server_sock) {
-                    connectNewClient();
-                    break; // Don't continue to check events for this iteration
-                } else {
-                    std::cout << "new message for = " << it->fd << std::endl;
-                    newMessage(it->fd);
-					break;
-                }
-            }
-
-            ++it; // Increment the iterator here
-        }
-
-        // Process and close marked sockets
-        for (std::vector<int>::iterator close_it = sockets_to_close.begin(); close_it != sockets_to_close.end(); ++close_it) {
-            std::cout << "Client disconnected (sock_fd = " << *close_it << ")" << std::endl;
-            close(*close_it); // Close the socket associated with the disconnected client
-
-            for (std::vector<pollfd>::iterator poll_it = this->socket_poll.begin(); poll_it != this->socket_poll.end(); ) {
-                if (poll_it->fd == *close_it) {
-                    poll_it = this->socket_poll.erase(poll_it);
-                } else {
-                    ++poll_it;
-                }
-            }
-        }
-
-        sockets_to_close.clear(); // Clear the list of sockets to be closed
+    if (listen(serverSocket, 5) == -1) {
+        perror("listen");
+        exit(-1);
     }
-}
 
 
-
-
-
-
-void Server::connectNewClient()
-{
-    sockaddr_in temp;
-    socklen_t len;
-    int clientId;
-	std::vector<std::string> client_info;
-
-    len = sizeof(temp);
-    clientId = accept(server_sock, (sockaddr *)&temp, &len);
-    if (clientId < 0) {
-        std::cerr << "An error occurred while accepting new client !" << std::endl;
+    struct epoll_event event;
+    event.data.fd = serverSocket;
+    event.events = EPOLLIN | EPOLLET;
+    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, serverSocket, &event) == -1) {
+        perror("epoll_ctl");
         return;
     }
 
-    pollfd new_fd = {clientId, POLLIN, 0};
-    socket_poll.push_back(new_fd);
+    std::vector<struct epoll_event> events(MAX_EVENTS);
+    std::cout << "Server started on port " << port << std::endl;
+    while (true) {
+        int numEvents = epoll_wait(epollfd, &events[0], MAX_EVENTS, -1);
+        for (int i = 0; i < numEvents; ++i) {
+            if (events[i].data.fd == serverSocket) {
+                int clientSocket = accept(serverSocket, NULL, NULL);
+                newClient(clientSocket);
+            } else {
+                if (events[i].events & EPOLLHUP) {
+                    std::cout << "Client disconnected in EPOLLHUP: " << events[i].data.fd << std::endl;
+                    handleDisconnect(events[i].data.fd);
+                    }
+                else if (events[i].events & EPOLLIN) {
+                    newMessage(events[i].data.fd);}
+                    // Handle data received from clients
+                    // Similar to the initial example
+                else
+                {
+                    std::cout << "Unknown event" << std::endl;
+                }
+            }
+            for (std::list<Client>::iterator it = clients.begin(); it != clients.end();) {
+                if ((it->isDisconnected()) == true) {
+                    std::cout << "Client removed from list: " << it->get_fd() << std::endl;
+                    it = clients.erase(it);
+                    } else {
+                        ++it;
+                    }
+            }
+        }
+    }   
 
-	Client new_client = autenthicateNewClient(clientId);
-	clients.push_back(new_client);
-    std::string str = ":local 001 local Welcome to ft_irc server!\tPlease enter the password: \r\n";
-    send(new_client.get_fd(), str.c_str(), str.length(), 0);
+    close(epollfd);
+    close(serverSocket);
 }
 
-Client Server::autenthicateNewClient(int client_fd){
-	
-	Client new_client(client_fd);
+void Server::newMessage(int clientSocket) {
+    char buffer[1024]; // Adjust the buffer size as needed
+    ssize_t bytesRead = recv(clientSocket, &buffer, sizeof(buffer) - 1, 0);
+    std::cout << "Bytes read: " << bytesRead << std::endl;
+ // Map to store client message buffers
+    if (bytesRead == -1) {
+        perror("recv");
+        return;
+    } else if (bytesRead == 0) {
+        // Client disconnected    
+        handleDisconnect(clientSocket);
+        std::cout << "Client sent empty message: " << clientSocket << std::endl;
+    } else {
+        buffer[bytesRead] = '\0'; // Null-terminate the received data
+        std::string str_buffer(buffer);
+        while (str_buffer.find("\r\n") != std::string::npos){
+            std::string str = client_buffers[clientSocket] + str_buffer.substr(0, str_buffer.find("\r\n"));
+            client_buffers[clientSocket] = "";
+            std::cout << "Received message from client " << clientSocket << ": " << str << std::endl;
+            str_buffer.erase(0, str_buffer.find("\r\n") + 2);
 
-	Message msg;
-	int i = 0;
-	while(i <= 4)
-	{
-		std::cout << i << std::endl;
-		msg = authMessage(client_fd);
-		if (i == 0){
-			if (msg.get_command().compare("CAP")){
-				msg = authMessage(client_fd);
-			}
-			else if (msg.get_command().compare("PASS")){
-				;//check password
-			}
-			else{
-				;//invalid password
-			}
-		}
-		else if (i == 1){
-			if (msg.get_command().compare("NICK")){
-				//check nickname
-				new_client.nickname = msg.get_params();
-			}
-			else{
-				;
-			}//must be nick
-		}
-		else if (i == 2){
-			if (msg.get_command().compare("USER")){
-				//check username
-				new_client.username = msg.get_params();
-			}
-			else{
-				;//must be user
-			}
-			
-		}
-		msg = authMessage(client_fd);
-		i++;
-	}
-	return new_client;
+            for (std::list<Client>::iterator it = clients.begin(); it != clients.end(); ++it) {
+                if (it->get_fd() == clientSocket) {
+                    if (it->registered_nick == false || it->registered_pass == false || it->registered_user == false){
+                        authMessage(str, *it);
+                    } else { 
+                        regular_message(str, *it);
+                    }
+                    
+                }
+            }
+            if (str_buffer.find("\r\n") == std::string::npos){
+                return;
+            }
+        }
+        std::string second_buffer(buffer);
+        while(second_buffer.find("\n") != std::string::npos){
+            std::string second_str = client_buffers[clientSocket]+ second_buffer.substr(0, second_buffer.find("\n"));
+            client_buffers[clientSocket] = "";
+            std::cout << "Received non standart message from client " << clientSocket << ": " << second_str << std::endl;
+            second_buffer.erase(0, second_buffer.find("\n") + 1);
+
+            for (std::list<Client>::iterator it = clients.begin(); it != clients.end(); ++it) {
+                if (it->get_fd() == clientSocket) {
+                    it->write("The message you send is not standart, please use \\r\\n");
+                    if (it->registered_nick == false || it->registered_pass == false || it->registered_user == false){
+                        authMessage(second_str, *it);
+                    } else { 
+                        regular_message(second_str, *it);
+                    }
+                    
+                }
+            }
+            if (second_buffer.find("\n") == std::string::npos){
+                return;}
+        }
+        std::string receivedMessage(buffer);
+        client_buffers[clientSocket] += receivedMessage;
+        // Handle the received message here
+        // For example, you can broadcast the message to other clients
+        // ...
+    }
+
 }
 
-Message Server::authMessage(int client_fd){
-	char buffer[1000];
-	int bytes = recv(client_fd, buffer, sizeof(buffer), 0);
-	Message msg;
-	if (bytes <= 0) {
-		if (bytes < 0) {
-			std::cerr << "Error while receiving data from client (sock_fd = " << client_fd << ")" << std::endl;
-		}
-		std::cout << "Client disconnected in message (sock_fd = " << client_fd << ")" << std::endl;
-		disconnectClient(client_fd);
-		close(client_fd); // Close the socket associated with the disconnected client
-		return msg;
-	}
-
-	std::string message(buffer, bytes);
-	std::cout << "Received authentication message authentication from " << client_fd << ": " << message << std::endl;
-	msg.Message_picker(message);
-	return msg;
+void Server::authMessage(std::string str, Client &client){
+    Message msg;
+    msg.Message_picker(str);
+    if (msg.get_invalid() == true){
+                std::cout << "Invalid message from client " << client.get_fd() << ": " << str << std::endl;
+                //insert code here to send error message to client
+                return;
+    }
+    std::cout << "Auth message from client " << client.get_fd() << ": " << msg.get_command() << std::endl;
+    if (msg.get_command() == "PASS"){
+        std::cout << "Password received from client: " << client.get_fd() << ": " << msg.get_params() << std::endl;
+        if (msg.get_params() == this->password){
+            std::cout << "Password accepted for client: " << client.get_fd() << std::endl;
+            client.registered_pass = true;
+        } else {
+            std::string str(":your.server.name 464 * :Password incorrect. Disconnecting.");
+            client.write(str);
+            handleDisconnect(client.get_fd());
+            return;//send error message
+        }
+    } else if (msg.get_command() == "NICK"){
+        client.nickname = msg.get_params();
+        std::cout << "Nickname accepted for client: " << client.get_fd() << std::endl;
+        client.registered_nick = true;
+    } else if (msg.get_command() == "USER"){
+        client.username = msg.get_params();
+        std::cout << "Username accepted for client: " << client.get_fd() << std::endl;
+        client.registered_user = true;
+    }
+    if (client.registered_nick == true && client.registered_pass == true && client.registered_user == true){
+        std::string reply = ":local 001 " + client.nickname + " :Welcome to the server!\r\n";
+        //send(client.get_fd(), reply.c_str(), reply.length(), 0);
+        client.write(reply);
+        //send welcome message
+    }
 }
+
+void Server::regular_message(std::string message, Client &client)
+{
+    Message msg;
+    msg.Message_picker(message);
+    std::cout << "Regular message from client " << client.get_fd() << ": " << msg.get_command() << std::endl;
+    //stuff
+}
+
+
+void Server::newClient(int clientSocket) {
+    // Check if the client socket has already been added
+    if (addedSockets.find(clientSocket) != addedSockets.end()) {
+        std::cout << "Client socket already added to epoll: " << clientSocket << std::endl;
+        return;
+    }
+
+    fcntl(clientSocket, F_SETFL, fcntl(clientSocket, F_GETFL) | O_NONBLOCK);
+
+    Client newClient(clientSocket);
+    clients.push_back(newClient);
     
 
-
-void Server::newMessage(int sock_fd)
-{
-    std::cout << "newMessage sock_fd = " << sock_fd << std::endl;
-
-    char buffer[1000];
-    int bytes = recv(sock_fd, buffer, sizeof(buffer), 0);
-
-    if (bytes <= 0) {
-        if (bytes < 0) {
-            std::cerr << "Error while receiving data from client (sock_fd = " << sock_fd << ")" << std::endl;
-        }
-        std::cout << "Client disconnected in message (sock_fd = " << sock_fd << ")" << std::endl;
-		disconnectClient(sock_fd);
-        close(sock_fd); // Close the socket associated with the disconnected client
+    struct epoll_event event;
+    event.data.fd = clientSocket;
+    event.events = EPOLLIN | EPOLLET;
+    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, clientSocket, &event) == -1) {
+        perror("epoll_ctl");
         return;
     }
 
-    std::string message(buffer, bytes);
-    std::cout << "Received message from " << sock_fd << ": " << message << std::endl;
-	Message msg;
-	msg.Message_picker(message);
-	if (msg.get_invalid() == true)
-	{
-		//add error message
-		return;
-	}
-	
-    // Handle the complete message here
+    addedSockets.insert(clientSocket);  // Mark the socket as added
 
-    // Note: If the message doesn't fit in the buffer, you might need to handle partial messages
+    std::cout << "New client connected: " << clientSocket << std::endl;
 }
 
-void Server::disconnectClient(int sock_fd)
-{
-	std::vector<Client>::iterator it;
-	for (it = clients.begin(); it != clients.end(); ++it) {
-		if (it->get_fd() == sock_fd) {
-			break;
-		}
-	}
-	if (it == clients.end()) {
-		std::cout << "disconnectClient: client not found" << std::endl;
-		return;
-	}
-	clients.erase(it);
-	std::cout << "disconnectClient sock_fd = " << sock_fd << std::endl;
-	this->sockets_to_close.push_back(sock_fd);
+void Server::handleDisconnect(int clientSocket) {
 
-	//add disconnect message
+    // Remove client from epoll
+    if (epoll_ctl(epollfd, EPOLL_CTL_DEL, clientSocket, NULL) == -1) {
+        perror("epoll_ctl (delete)");
+    }
+
+    // Find and mark the client as disconnected
+    for (std::list<Client>::iterator it = clients.begin(); it != clients.end(); ++it) {
+        if (it->get_fd() == clientSocket) {
+            client_buffers[clientSocket] = "";
+            it->setDisconnected(true);
+            break;
+        }
+    }
+
+
+    addedSockets.erase(clientSocket);  // Remove the socket from addedSockets
 }
 

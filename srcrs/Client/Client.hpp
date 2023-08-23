@@ -26,18 +26,22 @@ class Client {
     public:
         std::string nickname;
         std::string username;
+        bool registered_pass; // if password is registered
+        bool registered_user; // if user is registered
+        bool registered_nick; // if nick is registered
         int mod;
         int sock_fd;
 		int avail;
         int flag;
-
+        bool disconected;
         Client();
         Client(int);
         Client(Client const&);
         ~Client();
 
         int get_fd() const;
-
+        void setDisconnected(bool);
+        bool isDisconnected();
         Client &operator=(Client const &clt);
         void write(const std::string &);
         std::string getPrefix() const;

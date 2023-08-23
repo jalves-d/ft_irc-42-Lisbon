@@ -14,47 +14,58 @@ Message::Message(Message const &src){
     *this = src;
 }
 //function that takes the string sent by the client and seperates it into its parts
-void Message::Message_picker(std::string message){
-
+void Message::Message_picker(std::string message) {
     std::vector<std::string> words;
-    this->got_prefix =  false;
-    int end = message.find(' ');
-    if (end <= 0){
+    this->got_prefix = false;
+
+    size_t start = 0, end;
+
+    while ((end = message.find(' ', start)) != std::string::npos) {
+        words.push_back(message.substr(start, end - start));
+        start = end + 1;
+    }
+    words.push_back(message.substr(start));
+
+    if (words.empty()) {
         this->invalid = true;
         return;
     }
-    
-    while (end != -1){
-        words.push_back(message.substr(0, end));
-        message.erase(message.begin(), message.begin() + end + 1);
-        end = message.find(' ');
+
+    if (words.size() < 2) {
+        this->invalid = true;
+        return;
     }
-    words.push_back(message.substr(0, end));
+
     unsigned int i = 0;
-    if (words[i][0] == ':'){
-        if (words[i][1] == ' ' || words [i][1] == 0){
+    if (!words[i].empty() && words[i][0] == ':') {
+        if (words[i].size() == 1 || words[i][1] == ' ') {
             this->invalid = true;
             return;
         }
         this->got_prefix = true;
-        this->prefix = words[i];
+        this->prefix = words[i].substr(1);
         i++;
     }
-    if (!words[i][0]){
+
+    if (words[i].empty()) {
         this->invalid = true;
         return;
     }
+    
     this->command = words[i];
     i++;
-    while (i <= 1 + words.size())
-    {
-        this->params = this->params + ' ' + words[i];
+
+    while (i < words.size()) {
+        this->params += ' ' + words[i];
         i++;
     }
+    this->params.erase(0, 1);
     this->invalid = false;
-    this->params.erase(this->params.begin(), this->params.begin() + 1);
 
-} 
+    /*std::cout << "prefix: " << this->prefix << std::endl;
+    std::cout << "command: " << this->command << std::endl;
+    std::cout << "params: " << this->params << std::endl;*/
+}
 
 
 std::string Message::get_command(void)
