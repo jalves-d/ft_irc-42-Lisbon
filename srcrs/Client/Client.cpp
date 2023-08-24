@@ -10,6 +10,7 @@ Client::Client(int fd)
     this->registered_pass = false;
     this->registered_nick = false;
     this->registered_user = false;
+    this->registered_full = false;
     //std::cout << "New client created. (temp)FD: " << fd << std::endl;
 }
 
@@ -29,6 +30,7 @@ Client::Client(Client const &clt)
     this->registered_pass = clt.registered_pass;
     this->registered_nick = clt.registered_nick;
     this->registered_user = clt.registered_user;
+    this->registered_full = clt.registered_full;
     //std::cout << "New client created. FD: " << clt.sock_fd << std::endl;
 }
 
@@ -46,6 +48,7 @@ Client &Client::operator=(const Client &clt) {
     this->registered_pass = clt.registered_pass;
     this->registered_nick = clt.registered_nick;
     this->registered_user = clt.registered_user;
+    this->registered_full = clt.registered_full;
     return *this;
 }
 

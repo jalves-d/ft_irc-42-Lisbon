@@ -145,9 +145,6 @@ void Server::newMessage(int clientSocket) {
         }
         std::string receivedMessage(buffer);
         client_buffers[clientSocket] += receivedMessage;
-        // Handle the received message here
-        // For example, you can broadcast the message to other clients
-        // ...
     }
 
 }
@@ -173,29 +170,67 @@ void Server::authMessage(std::string str, Client &client){
             return;//send error message
         }
     } else if (msg.get_command() == "NICK"){
-        client.nickname = msg.get_params();
-        std::cout << "Nickname accepted for client: " << client.get_fd() << std::endl;
+        int nick_check = nick(msg.get_params(),client);
+        if (nick_check == 2){
+            return;
+        }
+        else if(nick_check == 1){
+            std::string str(":your.server.name 432 * :Erroneus nickname. Disconnecting.");
+            client.write(str);
+            handleDisconnect(client.get_fd());
+            return;
+        }
         client.registered_nick = true;
+        std::cout << "Nickname "<< client.nickname<< " acepted for client: " << client.get_fd() << std::endl;
     } else if (msg.get_command() == "USER"){
         client.username = msg.get_params();
-        std::cout << "Username accepted for client: " << client.get_fd() << std::endl;
+        std::cout << "Username "<< client.username << " accepted for client: " << client.get_fd() << std::endl;
         client.registered_user = true;
     }
     if (client.registered_nick == true && client.registered_pass == true && client.registered_user == true){
-        std::string reply = ":local 001 " + client.nickname + " :Welcome to the server!\r\n";
-        //send(client.get_fd(), reply.c_str(), reply.length(), 0);
+        std::string reply = ":local 001 " + client.nickname + " :Welcome to the server " + client.nickname;
         client.write(reply);
+        client.registered_full = true;
         //send welcome message
     }
 }
 
-void Server::regular_message(std::string message, Client &client)
+void Server::regular_message(std::string full_msg, Client &client)
 {
-    Message msg;
-    msg.Message_picker(message);
-    std::cout << "Regular message from client " << client.get_fd() << ": " << msg.get_command() << std::endl;
-    //stuff
+    std::cout << "Regular message from client " << client.get_fd() << ": " << full_msg << std::endl;
+    Message message;
+    message.Message_picker(full_msg);
+	std::string msg = message.get_command();
+    if (message.get_invalid() == true){
+        //std::cout << "Invalid message from client " << client.get_fd() << ": " << message << std::endl;
+        std::string str(":local 421 " + client.nickname + " " + msg + " :Unknown command");
+        client.write(str);
+        return;
+    }
+	if (msg.compare("JOIN") == 0)
+		;//join(message.get_params(), *client);
+	else if (msg.compare("LIST") == 0)
+		;//list(message.get_params(), *client);
+	else if (msg.compare("KICK") == 0)
+		;//kick(message.get_params(), *client);
+	else if (msg.compare("INVITE") == 0)
+		;//invite(message.get_params(), *client);
+	else if (msg.compare("MODE") == 0)
+		;//mode(message.get_params(), *client);
+	else if (msg.compare("TOPIC") == 0)
+		;//topic(message.get_params(), *client);
+	else if (msg.compare("NICK") == 0)
+		nick(message.get_params(), client);
+	else if (msg.compare("QUIT") == 0)
+		;//quit(message.get_params(), *client);
+	else if (msg.compare("PRIVMSG") == 0)
+		;//privmsg(message.get_params(), *client);
+	else{
+		std::string str(":local 421 " + client.nickname + " " + msg + " :Unknown command");
+        client.write(str);
+    }
 }
+
 
 
 void Server::newClient(int clientSocket) {
@@ -244,3 +279,48 @@ void Server::handleDisconnect(int clientSocket) {
     addedSockets.erase(clientSocket);  // Remove the socket from addedSockets
 }
 
+ int Server::nick(std::string cmd, Client &client)
+{
+	std::stringstream cmds(cmd);
+	std::string move;
+    std::list<Client>::iterator cit;
+
+	cmds >> move;
+	if (move.empty() == true)
+	{
+		//std::cout << "No nickname provided!" << std::endl;
+		return 1;
+	}
+    if (cmd.find(" ") != std::string::npos)
+    {
+        //std::cout << "Invalid nickname provided!" << std::endl;
+        return 1;
+    }
+	if (client.nickname.compare(move) == 0)
+	{
+
+        std::string str(":local 436 " + client.nickname + " :Nickname is already the one you're using.");
+		//std::cout << "The nickname provided is already your current nickname!" << std::endl;
+        client.write(str);
+		return 3;
+	}
+
+	for(cit = clients.begin(); cit != clients.end(); ++cit) 
+	{
+        if (cit->nickname.compare(move) == 0)
+		{
+			//std::cout << "The nickname provided is already in use!" << std::endl;
+            std::string str(":local 433 " + client.nickname + " " + move + " :Nickname is already in use.");
+            client.write(str);
+			return 2;
+		}
+	}
+	client.nickname = move;
+    if (client.registered_full == true)
+    {
+        std::string str(":local 001 " + client.nickname + " :Welcome to the server " + client.nickname + "!");
+        client.write(str);
+    }
+	//std::cout << "Your new nickname is " + move << std::endl;
+    return 0;
+}

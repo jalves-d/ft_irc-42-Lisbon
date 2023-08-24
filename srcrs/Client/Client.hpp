@@ -29,6 +29,7 @@ class Client {
         bool registered_pass; // if password is registered
         bool registered_user; // if user is registered
         bool registered_nick; // if nick is registered
+        bool registered_full; // if client is fully registered
         int mod;
         int sock_fd;
 		int avail;

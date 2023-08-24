@@ -50,10 +50,11 @@ class Server {
 		
 		void start();
         void newClient(int);
-		void handleDisconnect(int clientSocket);
+		void handleDisconnect(int);
 		void newMessage(int);
 		void authMessage(std::string, Client&);
-		void regular_message(std::string, Client&);		
+		void regular_message(std::string, Client&);
+		int  nick(std::string cmd, Client &); //returs 0 if ok, 1 if invalid nick, 2 if nick already in use, 3 if nick is the same	
 };
 
 #endif
