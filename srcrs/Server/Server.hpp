@@ -25,6 +25,7 @@
 
 # include "../Message/Message.hpp"
 # include "../Client/Client.hpp"
+# include "../Channel/Channel.hpp"
 
 class Message;
 class Client;

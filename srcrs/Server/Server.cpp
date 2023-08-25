@@ -175,20 +175,30 @@ void Server::authMessage(std::string str, Client &client){
             return;
         }
         else if(nick_check == 1){
-            std::string str(":your.server.name 432 * :Erroneus nickname. Disconnecting.");
-            client.write(str);
             handleDisconnect(client.get_fd());
             return;
         }
         client.registered_nick = true;
         std::cout << "Nickname "<< client.nickname<< " acepted for client: " << client.get_fd() << std::endl;
     } else if (msg.get_command() == "USER"){
-        client.username = msg.get_params();
-        std::cout << "Username "<< client.username << " accepted for client: " << client.get_fd() << std::endl;
-        client.registered_user = true;
+        std::string str = msg.get_params();
+        std::stringstream ss(str);
+
+        if (!(ss >> client.username >> client.mode >> client.unused >> client.realname)) {
+            // Extraction failed, handle the error (clear the stream, provide default values, etc.)
+            std::cerr << "Error extracting values from the stringstream." << std::endl;
+            std::string std(":local 461 " + client.nickname + " USER :Not enough parameters.");
+            client.write(std);
+            // Optionally, set default values for the fields
+        } else {
+            // Extraction was successful, proceed as before
+            std::cout << "Username " << client.username << " accepted for client: " << client.get_fd() << std::endl;
+            client.registered_user = true;
+        }
     }
     if (client.registered_nick == true && client.registered_pass == true && client.registered_user == true){
-        std::string reply = ":local 001 " + client.nickname + " :Welcome to the server " + client.nickname;
+        client.hostname = "local";
+        std::string reply = ":local 001 " + client.nickname + " :Welcome to the server " + client.nickname + "!" + client.username + "@" + client.hostname + " :Your real name is " + client.realname;
         client.write(reply);
         client.registered_full = true;
         //send welcome message
@@ -209,6 +219,8 @@ void Server::regular_message(std::string full_msg, Client &client)
     }
 	if (msg.compare("JOIN") == 0)
 		;//join(message.get_params(), *client);
+    else if(msg.compare("NAMES") == 0)
+        ;//names(message.get_params(), *client);
 	else if (msg.compare("LIST") == 0)
 		;//list(message.get_params(), *client);
 	else if (msg.compare("KICK") == 0)
@@ -288,12 +300,14 @@ void Server::handleDisconnect(int clientSocket) {
 	cmds >> move;
 	if (move.empty() == true)
 	{
-		//std::cout << "No nickname provided!" << std::endl;
+		std::string str(":your.server.name 432 * :Erroneus nickname. Disconnecting.");
+        client.write(str);//std::cout << "No nickname provided!" << std::endl;
 		return 1;
 	}
     if (cmd.find(" ") != std::string::npos)
     {
-        //std::cout << "Invalid nickname provided!" << std::endl;
+        std::string str(":your.server.name 432 * :Erroneus nickname. Disconnecting.");
+        client.write(str);
         return 1;
     }
 	if (client.nickname.compare(move) == 0)
@@ -315,6 +329,11 @@ void Server::handleDisconnect(int clientSocket) {
 			return 2;
 		}
 	}
+    if (move[0] == '#'){   
+        std::string str(":local 432 " + client.nickname + " " + move + " :Erroneus nickname.");
+        client.write(str);
+        return 1;
+    }
 	client.nickname = move;
     if (client.registered_full == true)
     {

@@ -26,6 +26,10 @@ class Client {
     public:
         std::string nickname;
         std::string username;
+        std::string mode;
+        std::string unused;
+        std::string hostname;
+        std::string realname;
         bool registered_pass; // if password is registered
         bool registered_user; // if user is registered
         bool registered_nick; // if nick is registered
