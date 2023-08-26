@@ -75,7 +75,7 @@ void Client::write(const std::string &msg)
 	// only difference between send() and write() is the presence of flags.  With a zero flags argument, send() is equivalent to write().
     std::string message = msg + "\r\n";
     if (send(sock_fd, message.c_str(), message.length(), 0) < 0)
-        std::cerr << "Error while sending self message!" << std::endl;
+        std::cerr << "Error while sending message!" << std::endl;
 }
 
 std::vector<std::string> &Client::getChannels()

@@ -29,18 +29,21 @@
 
 class Message;
 class Client;
+class Channel;
 
 class Server {
 	private:
 		int				server_sock;
 		int				port;
 		int				temp_fd;
+		std::string hostname;
 		std::string			password;
 		int epollfd; // Member variable to hold epoll file descriptor
 		std::vector<pollfd>	socket_poll; // Vector to store pollfd structs
 	    std::map<int, std::string> client_buffers; // Map to store client message buffers
 		std::vector<int> sockets_to_close;
 		std::list<Client> clients;
+		std::list<Channel> channels;
 		std::set<int> addedSockets;  // Store added client sockets
 
 	public:
@@ -55,7 +58,24 @@ class Server {
 		void newMessage(int);
 		void authMessage(std::string, Client&);
 		void regular_message(std::string, Client&);
-		int  nick(std::string cmd, Client &); //returs 0 if ok, 1 if invalid nick, 2 if nick already in use, 3 if nick is the same	
+		int getNickFD(std::string);
+		void notifyAllClientsInChannel(std::string channelName, std::string message, Client &client);
+		
+		
+		//commands
+		int  nick(std::string cmd, Client &); //returs 0 if ok, 1 if invalid nick, 2 if nick already in use, 3 if nick is the same as the current one
+		void  join(std::string cmd, Client &); 
+		void  part(std::string cmd, Client &);
+		void  names(std::string cmd, Client &);
+		void  list(std::string cmd, Client &);
+		void  topic(std::string cmd, Client &);
+		void  invite(std::string cmd, Client &);
+		void  kick(std::string cmd, Client &);
+		void  privmsg(std::string cmd, Client &);
+		void  quit(std::string cmd, Client &);
+		void  who(std::string cmd, Client &);
+		void mode(std::string cmd, Client &);
+
 };
 
 #endif

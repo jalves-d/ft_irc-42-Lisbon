@@ -5,6 +5,7 @@ Server::Server(int port, const char *password)
 {
 	this->port = port;
 	this->password = password;
+    this->hostname = "local";
 	epollfd = epoll_create1(0); // Initialize epollfd
     if (epollfd == -1) {
         perror("epoll_create1");
@@ -164,7 +165,7 @@ void Server::authMessage(std::string str, Client &client){
             std::cout << "Password accepted for client: " << client.get_fd() << std::endl;
             client.registered_pass = true;
         } else {
-            std::string str(":your.server.name 464 * :Password incorrect. Disconnecting.");
+            std::string str(":local 464 * :Password incorrect. Disconnecting.");
             client.write(str);
             handleDisconnect(client.get_fd());
             return;//send error message
@@ -218,7 +219,7 @@ void Server::regular_message(std::string full_msg, Client &client)
         return;
     }
 	if (msg.compare("JOIN") == 0)
-		;//join(message.get_params(), *client);
+		join(message.get_params(), client);//join(message.get_params(), *client);
     else if(msg.compare("NAMES") == 0)
         ;//names(message.get_params(), *client);
 	else if (msg.compare("LIST") == 0)
@@ -228,7 +229,7 @@ void Server::regular_message(std::string full_msg, Client &client)
 	else if (msg.compare("INVITE") == 0)
 		;//invite(message.get_params(), *client);
 	else if (msg.compare("MODE") == 0)
-		;//mode(message.get_params(), *client);
+		mode(message.get_params(), client);
 	else if (msg.compare("TOPIC") == 0)
 		;//topic(message.get_params(), *client);
 	else if (msg.compare("NICK") == 0)
@@ -237,6 +238,10 @@ void Server::regular_message(std::string full_msg, Client &client)
 		;//quit(message.get_params(), *client);
 	else if (msg.compare("PRIVMSG") == 0)
 		;//privmsg(message.get_params(), *client);
+    else if (msg.compare("WHO") == 0)
+        who(message.get_params(), client);
+    else if (msg.compare("PART") == 0)
+        ;//part(message.get_params(), *client
 	else{
 		std::string str(":local 421 " + client.nickname + " " + msg + " :Unknown command");
         client.write(str);
@@ -281,7 +286,24 @@ void Server::handleDisconnect(int clientSocket) {
     // Find and mark the client as disconnected
     for (std::list<Client>::iterator it = clients.begin(); it != clients.end(); ++it) {
         if (it->get_fd() == clientSocket) {
+            int fd = it->get_fd();
             client_buffers[clientSocket] = "";
+            //it->setDisconnected(true);
+            std::list<Channel>::iterator cit;
+
+            for (cit = this->channels.begin(); cit != this->channels.end(); ++cit) {
+                if (cit->verifyUserInChannel(fd) == true) {
+                    cit->removeClient(*it);
+                    for (std::list<Client>::iterator it2 = clients.begin(); it2 != clients.end(); ++it2) {
+                        if (cit->verifyUserInChannel(it2->get_fd()) == true) {
+                            std::cout << "Sending message to client " << it2->get_fd() << ": " << it->getPrefix() << " PART " << cit->channelName << std::endl;
+                            std::string str = ":" + it->getPrefix() + " PART " + cit->channelName + " :Leaving/Disconnecting";
+                            it2->write(str);
+                        }
+                    }
+                }
+                
+            }
             it->setDisconnected(true);
             break;
         }
@@ -342,4 +364,352 @@ void Server::handleDisconnect(int clientSocket) {
     }
 	//std::cout << "Your new nickname is " + move << std::endl;
     return 0;
+}
+
+void Server::join(std::string params, Client &client){
+    std::stringstream ss(params);
+    std::string channel;
+    std::string pass;
+    bool has_pass = false;
+    ss >> channel;
+    if (ss >> pass){
+        has_pass = true;
+    }
+    if (has_pass == false){
+        pass = "";
+    }
+    channel =  "#" + channel;
+    std::list<Channel>::iterator cit;
+    for(cit = this->channels.begin(); cit != this->channels.end(); ++cit){
+        if (cit->channelName.compare(channel) == 0)
+        {
+            if (cit->addClient(client, pass) == true){
+                for (std::list<Client>::iterator it = clients.begin(); it != clients.end(); ++it) {
+                    if (cit->verifyUserInChannel(it->get_fd()) == true){
+                        std::string str = ":" + client.getPrefix() + " JOIN " + channel;
+                        it->write(str);
+                    }   
+                }
+            }
+            return;
+        }
+    }
+    
+    Channel new_channel(channel, client);
+    this->channels.push_back(new_channel);
+    //std::string str = ":local 329 " + client.nickname + " " + channel + " :Channel";
+    //client.write(str);
+    std::string str = ":local 331 " + client.nickname + " " + channel + " :No topic is set";
+    client.write(str);
+    str = ":" + client.getPrefix() + " JOIN " + channel;
+    client.write(str);
+}
+
+
+void Server::who(std::string params, Client &client) {
+    std::stringstream ss(params);
+    std::string channel;
+    std::string flags; // To store optional flags like "o"
+    ss >> channel >> flags;
+
+    std::list<Channel>::iterator cit;
+
+    for (cit = this->channels.begin(); cit != this->channels.end(); ++cit) {
+        if (cit->channelName.compare(channel) == 0) {
+            std::list<Client>::iterator clt;
+
+            for (clt = this->clients.begin(); clt != this->clients.end(); ++clt) {
+                if (cit->verifyUserInChannel(clt->get_fd())) {
+                    // Check for "o" flag
+                    bool isOperator = flags.find("o") != std::string::npos;
+                    bool userIsOperator = cit->verifyAdminPrivilege(clt->get_fd()); // Modify this based on your logic
+                    if (isOperator && !userIsOperator) {
+                        continue; // Skip non-operators if "o" flag is specified
+                    }
+
+                    std::string flagsStr = userIsOperator ? "@" : "+";
+                    std::string hopcount = "0"; // You may want to calculate this value
+                    std::string str = ":" + this->hostname + " 352 " + client.nickname + " " +
+                                      channel + " " + clt->username + " " + clt->hostname + " " +
+                                      this->hostname + " " + clt->nickname + " " + flagsStr +
+                                      " " + hopcount + " :" + clt->realname;
+
+                    std::cout << str << std::endl;
+                    client.write(str);
+                }
+            }
+
+            break; // We found the channel, no need to keep looking
+        }
+    }
+
+    if (cit != this->channels.end()) {
+        std::string endOfListResponse = ":" + this->hostname + " 315 " + client.nickname + " " + channel + " :End of WHO list";
+        client.write(endOfListResponse);
+        std::cout << endOfListResponse << std::endl;
+    } else {
+        std::string noSuchChannelResponse = ":" + this->hostname + " 403 " + client.nickname + " " + channel + " :No such channel";
+        client.write(noSuchChannelResponse);
+        std::cout << noSuchChannelResponse << std::endl;
+    }
+}
+
+void Server::mode(std::string cmd, Client &client)
+{
+    std::stringstream cmds(cmd);
+    std::string move;
+    std::list<Channel>::iterator    cit;
+    std::string msg;
+    std::string channelName;
+    cmds >> move;
+    std::cout << "MODE: " << move << std::endl;
+    std::cout << "fullMODE: " << cmd << std::endl;
+    if (move.empty())
+    {
+        msg = ":local 461 " + client.nickname + " MODE :Not enough parameters1";
+        client.write(msg);
+        return;
+    }
+    for (cit = channels.begin(); cit != channels.end(); cit++)
+    {
+        if (cit->channelName == move)
+            break;
+    }
+    if (cit == channels.end())
+    {
+        msg = ":local 403 " + client.nickname + " " + move + " :No such channel";
+        client.write(msg);
+    }
+    else if (!cit->verifyUserInChannel((&client)->sock_fd))
+    {
+        msg = ":local 442 "+ client.nickname +" "+ cit->channelName + " :You're not on that channel";
+        client.write(msg);
+        return;
+    }
+    else if (!cit->verifyAdminPrivilege((&client)->sock_fd))
+    {
+        msg = ":local 482 "+ client.nickname +" "+ cit->channelName + " :You're not channel operator";
+        client.write(msg);
+        return;
+    }
+    else
+    {
+        std::string more;
+        cmds >> move;
+        if (cmds.eof())
+        {
+            
+            msg = ":local 324 " + client.nickname + " " + cit->channelName + " " + cit->returnModes();
+            client.write(msg);
+            return;
+        }
+        cmds >> more;
+        if (!more.empty() && !(move.c_str()[1] == 'o' || move.c_str()[1] == 'l' || move.c_str()[1] == 'k'))
+        {
+            msg = ":local 461 " + client.nickname + " MODE :Too many parameters1";
+            client.write(msg);
+            return;
+        }
+        if (more.empty() && (move.c_str()[1] == 'o' || move.c_str()[1] == 'l' || move.c_str()[1] == 'k'))
+        {
+            msg = ":local 461 " + client.nickname + " MODE :Not enought parameters2";
+            client.write(msg);
+            return;
+        }
+        if (!more.empty() && (move.c_str()[1] == 'o' || move.c_str()[1] == 'l' || move.c_str()[1] == 'k'))
+        {
+            std::string param;
+            cmds >> param;
+            if (!param.empty() && move.c_str()[1] == 'k')
+            {
+                msg = ":local 475 " + client.nickname + "  "+ cit->channelName + " :Invalid channel key";
+                client.write(msg);
+                return;
+            }
+            if (!param.empty())
+            {
+                msg = ":local 461 " + client.nickname + " MODE :Too many parameters2";
+                client.write(msg);
+                return;
+            }
+        }
+        //int i = 1;
+        int mode = -1;
+        if (move.c_str()[0] == '+')
+                mode = 0;
+        else if (move.c_str()[0] == '-')
+                mode = 1;
+        else
+        {
+            msg = ":local 461 " + client.nickname + " MODE :Missing flags, not enought parameters";
+            client.write(msg);
+            return;
+        }
+        if (move.c_str()[1] == 'o' && mode == 0)
+        {
+            if(cit->verifyUserInChannel(getNickFD(more)))
+            {
+                cit->addAdminPrivilege(getNickFD(more), client.sock_fd);
+                msg = ":" + client.getPrefix() + " MODE " + cit->channelName + " +o " + more;
+                client.write(msg);
+                notifyAllClientsInChannel(cit->channelName, "MODE " + cit->channelName + " +o " + more, client);
+            }
+            else
+            {
+                msg = ":local 442 "+ client.nickname +" "+ cit->channelName + " :You're not on that channel";
+                client.write(msg);
+            }
+            return;
+        }
+        else if (move.c_str()[1] == 'o' && mode == 1)
+        {
+            if(cit->verifyUserInChannel(getNickFD(more)))
+            {
+                cit->removeAdminPrivilege(getNickFD(more), client.sock_fd);
+                msg = ":" + client.getPrefix() + " MODE " + cit->channelName + " -o " + more;
+                client.write(msg);
+                notifyAllClientsInChannel(cit->channelName, "MODE " + cit->channelName + " -o " + more, client);
+            }
+            else
+            {
+                msg = ":local 442 "+ client.nickname +" "+ cit->channelName + " :You're not on that channel";
+                client.write(msg);
+            }
+            return;
+        }
+        else if (move.c_str()[1] == 'i' && mode == 0)
+        {
+            if(cit->changeInviteOnly(true, client.sock_fd))
+            {
+                msg = ":" + client.getPrefix() + " MODE " + cit->channelName + " +i";
+                client.write(msg);
+                notifyAllClientsInChannel(cit->channelName, "MODE " + cit->channelName + " +i ", client);
+            }
+            else
+            {
+                msg = ":local 442 "+ client.nickname +" "+ cit->channelName + " :Channel is mode +i";
+                client.write(msg);
+            }
+            return;
+        }
+        else if (move.c_str()[1] == 'i' && mode == 1)
+        {
+            if(cit->changeInviteOnly(false, client.sock_fd))
+            {
+                msg = ":" + client.getPrefix() + " MODE " + cit->channelName + " -i";
+                client.write(msg);
+                notifyAllClientsInChannel(cit->channelName, "MODE " + cit->channelName + " -i", client);
+            }
+            else
+            {
+                msg = ":local 442 "+ client.nickname +" "+ cit->channelName + " :Channel is mode -i";
+                client.write(msg);
+            }
+            return;
+        }
+        else if (move.c_str()[1] == 't' && mode == 0)
+        {
+            if(cit->changeAOT(true, client.sock_fd))
+            {
+                msg = ":" + client.getPrefix() + " MODE " + cit->channelName + " +t";
+                client.write(msg);
+                notifyAllClientsInChannel(cit->channelName, "MODE " + cit->channelName + " +t ", client);
+            }
+            else
+            {
+                msg = ":local 472 "+ client.nickname +" "+ cit->channelName + " :Channel is mode +t";
+                client.write(msg);
+            }
+            return;
+        }
+        else if (move.c_str()[1] == 't' && mode == 1)
+        {
+            if(cit->changeAOT(false, client.sock_fd))
+            {
+                msg = ":" + client.getPrefix() + " MODE " + cit->channelName + " -t";
+                client.write(msg);
+                notifyAllClientsInChannel(cit->channelName, "MODE " + cit->channelName + " -t ", client);
+            }
+            else
+            {
+                msg = ":local 472 "+ client.nickname +" "+ cit->channelName + " :Channel is mode -t";
+                client.write(msg);
+            }
+            return;
+        }
+        else if (move.c_str()[1] == 'k' && mode == 0)
+        {
+            cit->setPassword(more, client.sock_fd);
+            msg = ":" + client.getPrefix() + " MODE " + cit->channelName + " +k " + more;
+            client.write(msg);
+            notifyAllClientsInChannel(cit->channelName, "MODE " + cit->channelName + " +k " + more, client);
+            return;
+        }
+        else if (move.c_str()[1] == 'k' && mode == 1)
+        {
+            cit->setPassword(NULL, client.sock_fd);
+            msg = ":" + client.getPrefix() + " MODE " + cit->channelName + " -k";
+            client.write(msg);
+            notifyAllClientsInChannel(cit->channelName, "MODE " + cit->channelName + " -k ", client);
+            return;  
+        }
+        else if (move.c_str()[1] == 'l' && mode == 1)
+        {
+            cit->setUsersLimit(-1, client.sock_fd);
+            msg = ":" + client.getPrefix() + " MODE " + cit->channelName + " -l " + more;
+            client.write(msg);
+            notifyAllClientsInChannel(cit->channelName, "MODE " + cit->channelName + " -l " + more, client);
+            return;
+        }
+        else if (move.c_str()[1] == 'l' && mode == 0)
+        {
+            if (std::atoi(more.c_str()) < 1)
+            {
+                msg = ":local 467 "+ client.nickname +" "+ cit->channelName + " :Key set with an invalid number of users";
+                client.write(msg);
+            }
+            else
+            {
+                cit->setUsersLimit(std::atoi(more.c_str()), client.sock_fd);
+                msg = ":" + client.getPrefix() + " MODE " + cit->channelName + " +l " + more;
+                client.write(msg);
+                notifyAllClientsInChannel(cit->channelName, "MODE " + cit->channelName + " +l " + more, client);
+            }
+            return;
+        }
+        msg = ":local 461 " + client.nickname + " MODE :Missing flag, not enought parameters";
+        client.write(msg);
+        return;
+    }
+}
+
+int Server::getNickFD(std::string user)
+{
+    std::list<Client>::iterator cit;
+    
+    for (cit = clients.begin(); cit != clients.end(); cit++)
+    {
+        if (cit->nickname == user)
+            return cit->sock_fd;
+    }
+    return -1;
+}
+
+void Server::notifyAllClientsInChannel(std::string channelName, std::string message, Client &client) {
+    std::list<Channel>::iterator cit;
+
+    for (cit = this->channels.begin(); cit != this->channels.end(); ++cit) {
+        if (cit->channelName.compare(channelName) == 0) {
+            std::list<Client>::iterator clt;
+
+            for (clt = this->clients.begin(); clt != this->clients.end(); ++clt) {
+                if (cit->verifyUserInChannel(clt->get_fd())) {
+                    std::string str = ":" + client.getPrefix() +" " + message;
+                    clt->write(str);
+                }
+            }
+
+            break; // We found the channel, no need to keep looking
+        }
+    }
 }

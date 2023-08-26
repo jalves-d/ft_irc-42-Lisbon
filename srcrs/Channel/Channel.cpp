@@ -62,15 +62,25 @@ Channel::Channel(std::string name, Client &client)
 Channel::~Channel() {}
 
 bool Channel::verifyAdminPrivilege(int clientFd){
-    if (channelUsers[clientFd] == 1)
+    std::map<int, int>::iterator it = channelUsers.find(clientFd);
+
+    if (it != channelUsers.end() && (it->second == 1)) {
         return true;
+    }
+
     return false;
 }
-bool Channel::verifyUserInChannel(int clientFd){
-    if (channelUsers[clientFd] == 0 || channelUsers[clientFd] == 1)
+
+bool Channel::verifyUserInChannel(int clientFd) {
+    std::map<int, int>::iterator it = channelUsers.find(clientFd);
+
+    if (it != channelUsers.end() && (it->second == 0 || it->second == 1)) {
         return true;
+    }
+
     return false;
 }
+
 bool Channel::addAdminPrivilege(int to_change_clientFd, int request_clientFd){
     if (channelUsers[request_clientFd] == 1){
         if (channelUsers[to_change_clientFd] == 0){
@@ -163,47 +173,41 @@ bool Channel::changeInviteOnly(bool ad, int fd){
 
 bool Channel::addClient(Client &client, std::string pass)
 {
-    if (channelUsers[client.sock_fd] == 1){
+    std::cout << "addClient. FD = " << client.sock_fd << std::endl;
+    std::map<int, int>::iterator it;
+    for (it = channelUsers.begin(); it != channelUsers.end(); it++)
+        std::cout << "FD: " << it->first << " | " << it->second << std::endl;
+    
+
+    if (verifyUserInChannel(client.sock_fd) == true){
         std::string str = ":local 443 " + client.nickname + " " + this->channelName + " :You are already in " + this->channelName + "\r\n";
         client.write(str);
         return false;}
-    if (channelUsers[client.sock_fd] == 0){
-        std::string str = ":local 443 " + client.nickname  + " " +this->channelName + " :You are already in " + this->channelName + "\r\n";
+    
+    else if (this->hasUserLimit != 0 && this->channelUsers.size() >= this->usersLimit){
+        std::string str = ":local 471 " + client.nickname + " " + this->channelName + " :Channel " + this->channelName + " is full (-l))\r\n";
         client.write(str);
         return false;}
-    if (this->hasUserLimit != 0 && this->channelUsers.size() >= this->usersLimit){
-        std::string str = ";local 471 " + client.nickname + " " + this->channelName + " :Channel " + this->channelName + " is full (-l))\r\n";
-        return false;}
-    if (this->hasPassword != 0 && this->password.compare(pass) != 0){
+    else if (this->hasPassword != 0 && this->password.compare(pass) != 0){
         std::string str = ":local 475 " + client.nickname + " " + this->channelName + " :Cannot join channel (+k)\r\n";
         client.write(str);
         return false;
     }
-
+    else{
     channelUsers.insert(std::pair<int, int>(client.sock_fd, 0));
-    return true;
-}
+    std::string str = ":server 332 " + client.nickname + " " + this->channelName + " :Welcome to the channel " + this->channelName;
+    client.write(str);
 
-bool Channel::removeClient(Client &client)
-{
-    if (channelUsers[client.sock_fd] == 1){
-        channelUsers.erase(client.sock_fd);
-        return true;
+    str = ":" + client.getPrefix() + " JOIN " + this->channelName;
+    client.write(str);
+
+    return true;
     }
-    if (channelUsers[client.sock_fd] == 0){
-        channelUsers.erase(client.sock_fd);
-        return true;
-    }
-    return false;
 }
 
 bool Channel::removeClient(Client &client){ //remove a client from the channel
     //add message to the channel
-    if (this->channelUsers[client.sock_fd] == 1){
-        channelUsers.erase(client.sock_fd);
-        return true;
-    }
-    if (channelUsers[client.sock_fd] == 0){
+    if (this->verifyUserInChannel(client.sock_fd) == true){
         channelUsers.erase(client.sock_fd);
         return true;
     }
@@ -213,20 +217,27 @@ bool Channel::removeClient(Client &client){ //remove a client from the channel
 bool Channel::kickClient(Client &client, Client &kicker){ //kick a client from the channel, fd is the kicking users fd
     if (channelUsers[kicker.get_fd()] == 1){
         if (removeClient(client) == false){
-            std::string str = ":local 401 " + kicker.nickname + " " + this->channelName + " " + client.nickname + " :No such target\r\n";
-            client.write(str);
+            std::string str = ":local 401 " + kicker.nickname + " " + this->channelName + " " + client.nickname + " :No such target";
+            kicker.write(str);
             return false;
         }
-        //:kickerNickname!kickerUsername@kickerHost KICK #channel kickedNickname :reason
-        if (this->channelUsers[client.sock_fd] == 1){
-            channelUsers.erase(client.sock_fd);
-            return true;
-        }
-        if (channelUsers[client.sock_fd] == 0){
-            channelUsers.erase(client.sock_fd);
-            return true;
-        }
-            return true;
+        return true ; 
     }
+    std::string str = ":local 482 " + kicker.nickname + " " + this->channelName + " :You're not channel operator";
     return false;
-}        
+}
+
+
+std::string Channel::returnModes()
+{
+    std::string str = "+";
+    if (this->adminOnlyTopic == true)
+        str += "t";
+    if (this->inviteOnly == true)
+        str += "i";
+    if (this->hasPassword == true)
+        str += "k";
+    if (this->hasUserLimit == true)
+        str += "l";
+    return str;
+}

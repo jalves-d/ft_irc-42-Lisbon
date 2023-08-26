@@ -15,11 +15,12 @@ class Channel
 		std::string topic; //topic of the channel
         std::string password; //password of the channel
 		bool adminOnlyTopic; //if the topic can be changed only by the admin
-		int usersLimit; //limit of users in the channel
+		unsigned int usersLimit; //limit of users in the channel
 		bool inviteOnly; //if the channel is invite only
         bool hasUserLimit; //if the channel has a user limit
         bool hasPassword; //if the channel has a password
         bool hasTopic; //if the channel has a topic
+
 
 		Channel(Channel const&);
 		Channel &operator=(Channel const &channel);
@@ -41,7 +42,9 @@ class Channel
         bool addClient(Client &client, std::string pass); //add a client to the channel
         bool removeClient(Client &client); //remove a client from the channel
         bool kickClient(Client &client, Client &kicker); //kick a client from the channel, kicker is who is trying to kick
-        
+
+
+		std::string returnModes(); //creates a string with the current channels modes
 
 };
 
