@@ -17,6 +17,8 @@
 # include <sys/socket.h>
 # include <fcntl.h>
 # include <algorithm>
+# include <csignal>
+
 
 # include <cerrno>
 # include <sys/epoll.h>
@@ -46,8 +48,25 @@ class Server {
 		std::list<Client> clients;
 		std::list<Channel> channels;
 		std::set<int> addedSockets;  // Store added client sockets
-
+    	int memberValue;
+		
 	public:
+		Server() : memberValue(0) {}
+		void setMemberValue(int newValue) {
+        	memberValue = newValue;
+	    	}
+		static Server *serverInstance;
+		static void handleSIGINT(int signum) {
+			(void)signum;
+        	if (serverInstance) {
+            	std::cout << "Received SIGINT (Ctrl+C). Changing member value in Server." << std::endl;
+            	serverInstance->setMemberValue(42); // Change the member value to 42.
+			}
+   		}
+	
+	
+	
+	
 		typedef std::vector<pollfd>::iterator poll_iterator;
 		Server(int port, const char *password);
 		~Server();
@@ -64,12 +83,14 @@ class Server {
 		std::string getClientNick(int clientfd);
 		Client getClient(int clientfd);
 		int getUserFD(std::string user);
+		void handdleSigint(int);
 
 
 		
 		
 		//commands
-		int  nick(std::string cmd, Client &); //returs 0 if ok, 1 if invalid nick, 2 if nick already in use, 3 if nick is the same as the current one
+		int   nick(std::string cmd, Client &); //returs 0 if ok, 1 if invalid nick, 2 if nick already in use, 3 if nick is the same as the current one
+		void  quit(std::string cmd, Client&);
 		void  join(std::string cmd, Client &); 
 		void  part(std::string cmd, Client &);
 		void  names(std::string cmd, Client &);
@@ -77,10 +98,9 @@ class Server {
 		void  topic(std::string cmd, Client &);
 		void  invite(std::string cmd, Client &);
 		void  kick(std::string cmd, Client &);
-		void privmsg(Message message, Client &client);
-		void  quit(std::string cmd, Client &);
+		void  privmsg(Message message, Client &client);
 		void  who(std::string cmd, Client &);
-		void mode(std::string cmd, Client &);
+		void  mode(std::string cmd, Client &);
 
 };
 

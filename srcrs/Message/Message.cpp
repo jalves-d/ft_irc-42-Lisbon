@@ -31,7 +31,7 @@ void Message::Message_picker(std::string message) {
         return;
     }
 
-    if (words.size() < 2) {
+    if (words.size() < 1) {
         this->invalid = true;
         return;
     }
@@ -62,7 +62,7 @@ void Message::Message_picker(std::string message) {
     this->params.erase(0, 1);
     this->invalid = false;
 
-    /*std::cout << "prefix: " << this->prefix << std::endl;
+   /* std::cout << "prefix: " << this->prefix << std::endl;
     std::cout << "command: " << this->command << std::endl;
     std::cout << "params: " << this->params << std::endl;*/
 }

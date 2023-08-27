@@ -1,9 +1,12 @@
 #include "Server/Server.hpp"
 #include <iostream>
 #include <csignal>
+#include <csignal>
+
 
 int main(int argc, char **argv)
 {
+
 	if (argc != 3)
 	{
 		std::cout << "./ircserv <port> <password>" << std::endl;
@@ -16,5 +19,6 @@ int main(int argc, char **argv)
 		exit(-1);
 	}
 	Server server(std::atoi(argv[1]), argv[2]);
+	
 	server.start();
 }

@@ -1,7 +1,8 @@
 #include "Server.hpp"
 
+Server *Server::serverInstance = NULL; // Define the static member variable
 
-Server::Server(int port, const char *password)
+Server::Server(int port, const char *password) :memberValue(0)
 {
 	this->port = port;
 	this->password = password;
@@ -15,7 +16,9 @@ Server::Server(int port, const char *password)
 
 Server::~Server() {}
 
+
 void Server::start() {
+
 	const int MAX_EVENTS = 100000;
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (serverSocket == -1) {
@@ -23,8 +26,8 @@ void Server::start() {
 
         exit(-1);
     }
-    int flags = fcntl(serverSocket, F_GETFL, 0);
-    fcntl(serverSocket, F_SETFL, flags | O_NONBLOCK);
+    //int flags = fcntl(serverSocket, F_GETFL, 0);
+    fcntl(serverSocket, F_SETFL, O_NONBLOCK);
     struct sockaddr_in serverAddr = {};;
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(port);  // Use the provided port
@@ -41,7 +44,8 @@ void Server::start() {
         perror("listen");
         exit(-1);
     }
-
+    serverInstance = this;
+    signal(SIGINT, &Server::handleSIGINT);
 
     struct epoll_event event;
     event.data.fd = serverSocket;
@@ -54,6 +58,12 @@ void Server::start() {
     std::vector<struct epoll_event> events(MAX_EVENTS);
     std::cout << "Server started on port " << port << std::endl;
     while (true) {
+        
+        if (memberValue != 0)
+        {
+            std::cout << "Closing server" << std::endl;
+            break;
+        }
         int numEvents = epoll_wait(epollfd, &events[0], MAX_EVENTS, -1);
         for (int i = 0; i < numEvents; ++i) {
             if (events[i].data.fd == serverSocket) {
@@ -220,13 +230,19 @@ void Server::regular_message(std::string full_msg, Client &client)
         client.write(str);
         return;
     }*/
+    std::cout << msg << std::endl;
+    std::cout << msg.compare("LIST")<< std::endl;
+
+
 	if (msg.compare("JOIN") == 0)
 		join(message.get_params(), client);//join(message.get_params(), *client);
     else if(msg.compare("NAMES") == 0)
         names(message.get_params(), client);
 	else if (msg.compare("LIST") == 0)
-		list(message.get_params(), client);
-	else if (msg.compare("KICK") == 0)
+    {
+        std::cout << "LIST" << std::endl;
+    	list(message.get_params(), client);
+    }else if (msg.compare("KICK") == 0)
 		kick(message.get_params(), client);
 	else if (msg.compare("INVITE") == 0)
 		invite(message.get_params(), client);
@@ -237,7 +253,7 @@ void Server::regular_message(std::string full_msg, Client &client)
 	else if (msg.compare("NICK") == 0)
 		nick(message.get_params(), client);
 	else if (msg.compare("QUIT") == 0)
-		;//quit(message.get_params(), client);
+		quit(message.get_params(), client);
 	else if (msg.compare("PRIVMSG") == 0)
 		privmsg(message, client);
     else if (msg.compare("WHO") == 0)
@@ -246,8 +262,21 @@ void Server::regular_message(std::string full_msg, Client &client)
         part(message.get_params(), client);
 	else{
 		std::string str(":local 421 " + client.nickname + " " + msg + " :Unknown command");
+        std::cout << full_msg << std::endl;
         client.write(str);
     }
+}
+
+void Server::quit(std::string cmd, Client &client){
+    std::stringstream ss(cmd);
+    std::string msg;
+    ss >> msg;
+    if (msg.empty() == true){
+        msg = "Client quit";
+    }
+    std::string str = ":" + client.getPrefix() + " QUIT :" + msg;
+    client.write(str);
+    handleDisconnect(client.get_fd());
 }
 
 
@@ -259,7 +288,7 @@ void Server::newClient(int clientSocket) {
         return;
     }
 
-    fcntl(clientSocket, F_SETFL, fcntl(clientSocket, F_GETFL) | O_NONBLOCK);
+    fcntl(clientSocket, F_SETFL, O_NONBLOCK);
 
     Client newClient(clientSocket);
     clients.push_back(newClient);
@@ -380,7 +409,8 @@ void Server::join(std::string params, Client &client){
     if (has_pass == false){
         pass = "";
     }
-    channel =  "#" + channel;
+    if(channel[0] != '#'){
+        channel =  "#" + channel;}
     std::list<Channel>::iterator cit;
     for(cit = this->channels.begin(); cit != this->channels.end(); ++cit){
         if (cit->channelName.compare(channel) == 0)
@@ -390,6 +420,7 @@ void Server::join(std::string params, Client &client){
                     if (cit->verifyUserInChannel(it->get_fd()) == true){
                         std::string str = ":" + client.getPrefix() + " JOIN " + channel;
                         it->write(str);
+                        names(channel, *it);
                     }   
                 }
             }
@@ -405,6 +436,7 @@ void Server::join(std::string params, Client &client){
     client.write(str);
     str = ":" + client.getPrefix() + " JOIN " + channel;
     client.write(str);
+    names(channel, client);
 }
 
 
@@ -464,6 +496,17 @@ void Server::mode(std::string cmd, Client &client)
     std::string msg;
     std::string channelName;
     cmds >> move;
+
+    if (cmd.empty()){
+        {
+            
+            msg = ":local 324 " + client.nickname + " " + cit->channelName + " " + cit->returnModes();
+            client.write(msg);
+            return;
+        }
+    }
+
+
     std::cout << "MODE: " << move << std::endl;
     std::cout << "fullMODE: " << cmd << std::endl;
     if (move.empty())
@@ -490,6 +533,9 @@ void Server::mode(std::string cmd, Client &client)
     }
     else if (!cit->verifyAdminPrivilege((&client)->sock_fd))
     {
+        std::string more;
+        cmds >> move;
+        
         msg = ":local 482 "+ client.nickname +" "+ cit->channelName + " :You're not channel operator";
         client.write(msg);
         return;
@@ -498,13 +544,6 @@ void Server::mode(std::string cmd, Client &client)
     {
         std::string more;
         cmds >> move;
-        if (cmds.eof())
-        {
-            
-            msg = ":local 324 " + client.nickname + " " + cit->channelName + " " + cit->returnModes();
-            client.write(msg);
-            return;
-        }
         cmds >> more;
         if (!more.empty() && !(move.c_str()[1] == 'o' || move.c_str()[1] == 'l' || move.c_str()[1] == 'k'))
         {
@@ -512,7 +551,7 @@ void Server::mode(std::string cmd, Client &client)
             client.write(msg);
             return;
         }
-        if (more.empty() && (move.c_str()[1] == 'o' || move.c_str()[1] == 'l' || move.c_str()[1] == 'k'))
+        if (more.empty() && (move.c_str()[1] == 'o' || (move.c_str()[1] == 'l' && move.c_str()[0] == '+')|| (move.c_str()[1] == 'k' && move.c_str()[0] == '+')))
         {
             msg = ":local 461 " + client.nickname + " MODE :Not enought parameters2";
             client.write(msg);
@@ -649,7 +688,7 @@ void Server::mode(std::string cmd, Client &client)
         }
         else if (move.c_str()[1] == 'k' && mode == 1)
         {
-            cit->setPassword(NULL, client.sock_fd);
+            cit->removePassword(client.sock_fd);
             msg = ":" + client.getPrefix() + " MODE " + cit->channelName + " -k";
             client.write(msg);
             notifyAllClientsInChannel(cit->channelName, "MODE " + cit->channelName + " -k ", client);
@@ -657,7 +696,7 @@ void Server::mode(std::string cmd, Client &client)
         }
         else if (move.c_str()[1] == 'l' && mode == 1)
         {
-            cit->setUsersLimit(-1, client.sock_fd);
+            cit->removeUsersLimit(client.sock_fd);
             msg = ":" + client.getPrefix() + " MODE " + cit->channelName + " -l " + more;
             client.write(msg);
             notifyAllClientsInChannel(cit->channelName, "MODE " + cit->channelName + " -l " + more, client);
@@ -772,7 +811,7 @@ void Server::kick(std::string cmd, Client &client)
     else
     {
         cmds >> move;
-        userfd = getUserFD(move);
+        userfd = getNickFD(move);
         if (userfd == -1)
         {
             msg = ":local 401 " + client.nickname + " " + cit->channelName + " " + move + " :No such target";
@@ -820,44 +859,45 @@ void Server::names(std::string cmd, Client &client)
     std::list<Client>::iterator it;
     std::list<Channel>::iterator    cit;
     std::string msg = "";
-    std::stringstream gettarget(cmd);
-    std::string findtarget = "#";
-    bool hastarget = 0;
-    bool nick = 0;
-    while (!gettarget.end || findtarget.c_str()[0] == '#')
-        gettarget >> findtarget;
-    if (!gettarget.end)
-    {
-        msg = ":local 461 " + client.nickname + " NAMES :Too many parameters";
-        client.write(msg);
-        return;
-    }
-    if (findtarget.c_str()[0] != '#')
-        hastarget = 1;
-    if (hastarget == 1)
-    {
-        if (getNickFD(findtarget) == -1 && getUserFD(findtarget) == -1)
-        {
-            msg = ":local 401 " + client.nickname + " " + findtarget + " :No such nick/channel";
-            client.write(msg);
-            return;
-        }
-        if (getUserFD(findtarget) != -1)
-            nick = 1;
-    }
+  
+  //  bool nick = 0;
     cmds >> move;
-    if (move.empty())
+    
+    for (cit = channels.begin(); cit != channels.end(); cit++)
     {
-            msg = ":local 461 " + client.nickname + " NAMES :Not enough parameters";
+            std::string str;
+            for (it = clients.begin(); it != clients.end(); it++)
+            {
+                if (cit->verifyUserInChannel((*it).sock_fd)){
+                    if(cit->verifyAdminPrivilege((*it).sock_fd))
+                        {str += " @" + (*it).nickname;}
+                    else
+                       {str += " " + (*it).nickname;  }       
+                } 
+            }
+            msg = ":local 353 " + client.nickname + " = " + cit->channelName + " :" + str;
             client.write(msg);
-            return;
     }
-    while(!cmds.end)
+    
+    /*while(!cmds.eof())
     {
         for (cit = channels.begin(); cit != channels.end(); cit++)
         {
             if (cit->channelName == move)
-                break;
+            {   
+                std::string str;
+                for (it = clients.begin(); it != clients.end(); it++)
+                {
+                   if (cit->verifyUserInChannel((*it).sock_fd)){
+                        if(cit->verifyAdminPrivilege((*it).sock_fd))
+                            {str += "@" + (*it).nickname;}
+                        else
+                            {str += " " + (*it).nickname;  }       
+                    } 
+                }          
+                msg = ":local 353 " + client.nickname + " = " + cit->channelName + " :" + str;
+                client.write(msg);
+            }
         }
         if (cit == channels.end())
         {
@@ -865,47 +905,19 @@ void Server::names(std::string cmd, Client &client)
             client.write(msg);
             return;
         }
-        for (it = clients.begin(); it != clients.end(); it++)
-        {
-            if (cit->verifyUserInChannel((*it).sock_fd))
-                msg += " " + (*it).nickname;             
-        }
-        if(hastarget == 0)
-        {
-            msg = ":local 353 " + client.nickname + " " + move;
-            client.write(msg);
-        }
-        else
-        {
-            msg = ":local 353 " + findtarget + " " + move;
-            if (nick == 0)
-                getClient(getNickFD(findtarget)).write(msg);
-            else
-                getClient(getUserFD(findtarget)).write(msg);
-        }
+        
         cmds >> move;
-        if (move == findtarget)
-            break;
-    }
-    if(hastarget == 0)
-    {
-        msg = ":local 366 " + client.nickname + " :End of NAMES list";
-        client.write(msg);
-    }
-    else
-    {
-        msg = ":local 366 " + findtarget + " :End of NAMES list";
-        if (nick == 0)
-            getClient(getNickFD(findtarget)).write(msg);
-        else
-            getClient(getUserFD(findtarget)).write(msg);
-    }
+    }*/
+    msg = ":local 366 " + client.nickname + " :End of NAMES list";
+    client.write(msg);
+    
+    
 }
 
 void Server::privmsg(Message message, Client &client)
 {
     std::string cmd = message.get_params();
-    std::string prefix = message.get_prefix();
+    std::string prefix = client.getPrefix();
     std::stringstream cmds(cmd);
     std::string move;
     std::list<Channel>::iterator    cit;
@@ -958,7 +970,9 @@ void Server::privmsg(Message message, Client &client)
     for (it = cit->channelUsers.begin(); it != cit->channelUsers.end(); it++)
     {
         cclient = getClient((*it).first);
-        cclient.write(msg);
+        if (client.get_fd() != cclient.get_fd()){
+            cclient.write(msg);}
+        
     }
 }
 
@@ -1008,11 +1022,15 @@ void Server::part(std::string cmd, Client &client)
                 msg = msg + reasons;
             }
             client.write(msg);
+            int i = 0;
             for (it = cit->channelUsers.begin(); it != cit->channelUsers.end(); it++)
             {
                 cclient = getClient((*it).first);
                 cclient.write(msg);
+                i++;
             }
+            if(i == 0)
+                channels.erase(cit);
         } 
     }
 }
@@ -1064,10 +1082,12 @@ void Server::invite(std::string cmd, Client &client)
         {
             msg = ":" + client.getPrefix() + " INVITE " + cclient.nickname + " " + cit->channelName;
             cclient.write(msg);
+            names(cit->channelName, cclient);
             for (it = cit->channelUsers.begin(); it != cit->channelUsers.end(); it++)
             {
                 cclient = getClient((*it).first);
                 cclient.write(msg);
+                names(cit->channelName, cclient);
             }
         }
         return; 
@@ -1076,57 +1096,54 @@ void Server::invite(std::string cmd, Client &client)
 
 
 
-
-
 void Server::list(std::string cmd, Client &client)
 {
     std::list<Channel>::iterator    cit;
-    std::list<Client>::iterator it;
     std::string msg;
-    msg = "Channel list:";
-    client.write(msg);
-    if (cmd.empty())
+    msg = "Channel list:" + (cmd.size());
+    //client.write(msg);
+    if (cmd.size() == 0)
     {
+        std::cout << "cmd.size() == 0" << std::endl;
         for (cit = channels.begin(); cit != channels.end(); cit++)
         {
+            std::cout << cit->channelName << std::endl;
+            //client.write(msg);
             msg = ":local 322 " + client.nickname + " " + cit->channelName + " " + to_string(cit->channelUsers.size()) + " :" + cit->topic;
             client.write(msg);
         }
-        msg = ":local 322 " + client.nickname + " :End of LIST";
+        msg = ":local 323 " + client.nickname + " :End of LIST";
         client.write(msg);
     }
     else
     {
+        std::replace(cmd.begin(), cmd.end(), ',', ' ');
         std::stringstream cmds(cmd);
         std::string move;
-        cmds >> move;
-        if(!cmds.end)
+        
+        while (!cmds.eof())
         {
-            msg = ":local 461 " + client.nickname + " LIST :Too many parameters";
-            client.write(msg);
-            return;
-        }
-        for (it = clients.begin(); it != clients.end(); it++)
-        {
-            if (it->nickname == move)
-                break;
-        }
-        if (it == clients.end())
-        {
-            msg = ":local 401 " + client.nickname + " " + move + " :No such nick";
-            client.write(msg);
-            return;
-        }
-        for (cit = channels.begin(); cit != channels.end(); cit++)
-        {
-            if (cit->channelName.find(move) != std::string::npos)
+            cmds >> move;
+            for (cit = channels.begin(); cit != channels.end(); cit++)
             {
-                msg = ":local 322 " + it->nickname + " " + cit->channelName + " " + to_string(cit->channelUsers.size()) + " :" + cit->topic;
-                (*it).write(msg);
+                if (cit->channelName == move)
+                {
+                    std::string aux = "";
+                    if (cit->hasTopic)
+                        aux = " :" + cit->topic;
+                    msg = ":local 322 " + client.nickname + " " + cit->channelName + " " + to_string(cit->channelUsers.size()) + aux;
+                    (client).write(msg);
+                }
+            }
+            if (cit == channels.end())
+            {
+                msg = ":local 403 " + client.nickname + " " + move + " :No such channel";
+                client.write(msg);
+                return;
             }
         }
-        msg = ":local 322 " + it->nickname + " :End of LIST";
-        (*it).write(msg);
+        msg = ":local 323 " + client.nickname + " :End of LIST";
+        (client).write(msg);
     }
 }
 
@@ -1170,7 +1187,7 @@ void Server::topic(std::string cmd, Client &client)
             client.write(msg);
             return;
         }
-        if (cit->verifyUserInChannel(client.sock_fd))
+        if (!cit->verifyUserInChannel(client.sock_fd))
         {
             msg = ":local 442 "+ client.nickname +" "+ cit->channelName + " :You're not on that channel";
             client.write(msg);
@@ -1189,7 +1206,7 @@ void Server::topic(std::string cmd, Client &client)
             {
                 if(cit->verifyUserInChannel((*it).sock_fd))
                 {
-                    msg = ":" + client.getPrefix() + " TOPIC " + cit->channelName + " :" + prevname + " has topic changed";
+                    msg = ":" + client.getPrefix() + " TOPIC " + cit->channelName + " :" + move;
                     (*it).write(msg);
                 }
             }
