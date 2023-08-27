@@ -60,6 +60,11 @@ class Server {
 		void regular_message(std::string, Client&);
 		int getNickFD(std::string);
 		void notifyAllClientsInChannel(std::string channelName, std::string message, Client &client);
+		std::string getClientNick(int clientfd);
+		Client getClient(int clientfd);
+		int getUserFD(std::string user);
+
+
 		
 		
 		//commands

@@ -198,7 +198,7 @@ void Server::authMessage(std::string str, Client &client){
         }
     }
     if (client.registered_nick == true && client.registered_pass == true && client.registered_user == true){
-        client.hostname = "local";
+        client.hostname = "localhost";
         std::string reply = ":local 001 " + client.nickname + " :Welcome to the server " + client.nickname + "!" + client.username + "@" + client.hostname + " :Your real name is " + client.realname;
         client.write(reply);
         client.registered_full = true;
@@ -225,7 +225,7 @@ void Server::regular_message(std::string full_msg, Client &client)
 	else if (msg.compare("LIST") == 0)
 		;//list(message.get_params(), *client);
 	else if (msg.compare("KICK") == 0)
-		;//kick(message.get_params(), *client);
+		kick(message.get_params(), client);
 	else if (msg.compare("INVITE") == 0)
 		;//invite(message.get_params(), *client);
 	else if (msg.compare("MODE") == 0)
@@ -683,18 +683,6 @@ void Server::mode(std::string cmd, Client &client)
     }
 }
 
-int Server::getNickFD(std::string user)
-{
-    std::list<Client>::iterator cit;
-    
-    for (cit = clients.begin(); cit != clients.end(); cit++)
-    {
-        if (cit->nickname == user)
-            return cit->sock_fd;
-    }
-    return -1;
-}
-
 void Server::notifyAllClientsInChannel(std::string channelName, std::string message, Client &client) {
     std::list<Channel>::iterator cit;
 
@@ -711,5 +699,203 @@ void Server::notifyAllClientsInChannel(std::string channelName, std::string mess
 
             break; // We found the channel, no need to keep looking
         }
+    }
+}
+
+
+std::string Server::getClientNick(int clientfd){
+    std::list<Client>::iterator cit;
+    
+    for (cit = clients.begin(); cit != clients.end(); cit++)
+    {
+        if (cit->sock_fd == clientfd)
+            return cit->nickname;
+    }
+    return NULL;
+
+}
+
+
+Client Server::getClient(int clientfd)
+{
+    std::list<Client>::iterator cit;
+    
+    for (cit = clients.begin(); cit != clients.end(); cit++)
+    {
+        if (cit->sock_fd == clientfd)
+            return *cit;
+    }
+    
+    return *cit;
+}
+
+int Server::getNickFD(std::string user)
+{
+    std::list<Client>::iterator cit;
+    
+    for (cit = clients.begin(); cit != clients.end(); cit++)
+    {
+        if (cit->nickname == user)
+            return cit->sock_fd;
+    }
+    return -1;
+}
+
+void Server::kick(std::string cmd, Client &client)
+{
+    std::stringstream cmds(cmd);
+    std::string move;
+    std::list<Channel>::iterator    cit;
+    std::map<int,int>::iterator it;
+
+    int userfd = 0;
+    std::string msg;
+    cmds >> move;
+    if (move.empty())
+    {
+        msg = ":local 461 " + client.nickname + " KICK :Not enough parameters";
+        client.write(msg);
+        return;
+    }
+    for (cit = channels.begin(); cit != channels.end(); cit++)
+    {
+        if (cit->channelName == move)
+            break;
+    }
+    if (cit == channels.end())
+    {
+        msg = ":local 403 " + client.nickname + " " + move + " :No such channel";
+        client.write(msg);
+    }
+    else
+    {
+        cmds >> move;
+        userfd = getUserFD(move);
+        if (userfd == -1)
+        {
+            msg = ":local 401 " + client.nickname + " " + cit->channelName + " " + move + " :No such target";
+            client.write(msg);
+            return;
+        }
+        Client cclient = getClient(userfd);
+        if (cit->kickClient(cclient, client))
+        {
+            msg = ":" + client.getPrefix() + " KICK " + cit->channelName + " " + cclient.nickname + " :";
+            std::string reasons;
+            while (!cmds.end)
+            {
+                cmds >> reasons;
+                msg = msg + reasons;
+            }
+            cclient.write(msg);
+            for (it = cit->channelUsers.begin(); it != cit->channelUsers.end(); it++)
+            {
+                cclient = getClient((*it).first);
+                cclient.write(msg);
+            }
+        }
+        return; 
+    }
+}
+
+int Server::getUserFD(std::string user)
+{
+    std::list<Client>::iterator cit;
+    
+    for (cit = clients.begin(); cit != clients.end(); cit++)
+    {
+        if (cit->username == user)
+            return cit->sock_fd;
+    }
+    return -1;
+}
+
+
+void Server::names(std::string cmd, Client &client)
+{
+    std::stringstream cmds(cmd);
+    std::string move;
+    std::list<Client>::iterator it;
+    std::list<Channel>::iterator    cit;
+    std::string msg = "";
+    std::stringstream gettarget(cmd);
+    std::string findtarget = "#";
+    bool hastarget = 0;
+    bool nick = 0;
+    while (!gettarget.end || findtarget.c_str()[0] == '#')
+        gettarget >> findtarget;
+    if (!gettarget.end)
+    {
+        msg = ":local 461 " + client.nickname + " NAMES :Too many parameters";
+        client.write(msg);
+        return;
+    }
+    if (findtarget.c_str()[0] != '#')
+        hastarget = 1;
+    if (hastarget == 1)
+    {
+        if (getNickFD(findtarget) == -1 && getUserFD(findtarget) == -1)
+        {
+            msg = ":local 401 " + client.nickname + " " + findtarget + " :No such nick/channel";
+            client.write(msg);
+            return;
+        }
+        if (getUserFD(findtarget) != -1)
+            nick = 1;
+    }
+    cmds >> move;
+    if (move.empty())
+    {
+            msg = ":local 461 " + client.nickname + " NAMES :Not enough parameters";
+            client.write(msg);
+            return;
+    }
+    while(!cmds.end)
+    {
+        for (cit = channels.begin(); cit != channels.end(); cit++)
+        {
+            if (cit->channelName == move)
+                break;
+        }
+        if (cit == channels.end())
+        {
+            msg = ":local 403 " + client.nickname + " " + move + " :No such channel";
+            client.write(msg);
+            return;
+        }
+        for (it = clients.begin(); it != clients.end(); it++)
+        {
+            if (cit->verifyUserInChannel((*it).sock_fd))
+                msg += " " + (*it).nickname;             
+        }
+        if(hastarget == 0)
+        {
+            msg = ":local 353 " + client.nickname + " " + move;
+            client.write(msg);
+        }
+        else
+        {
+            msg = ":local 353 " + findtarget + " " + move;
+            if (nick == 0)
+                getClient(getNickFD(findtarget)).write(msg);
+            else
+                getClient(getUserFD(findtarget)).write(msg);
+        }
+        cmds >> move;
+        if (move == findtarget)
+            break;
+    }
+    if(hastarget == 0)
+    {
+        msg = ":local 366 " + client.nickname + " :End of NAMES list";
+        client.write(msg);
+    }
+    else
+    {
+        msg = ":local 366 " + findtarget + " :End of NAMES list";
+        if (nick == 0)
+            getClient(getNickFD(findtarget)).write(msg);
+        else
+            getClient(getUserFD(findtarget)).write(msg);
     }
 }
