@@ -497,15 +497,8 @@ void Server::mode(std::string cmd, Client &client)
     std::string msg;
     std::string channelName;
     cmds >> move;
-
-    if (cmd.empty()){
-        {
-            
-            msg = ":local 324 " + client.nickname + " " + cit->channelName + " " + cit->returnModes();
-            client.write(msg);
-            return;
-        }
-    }
+    
+    
 
 
     std::cout << "MODE: " << move << std::endl;
@@ -532,20 +525,28 @@ void Server::mode(std::string cmd, Client &client)
         client.write(msg);
         return;
     }
-    else if (!cit->verifyAdminPrivilege((&client)->sock_fd))
-    {
-        std::string more;
-        cmds >> move;
-        
-        msg = ":local 482 "+ client.nickname +" "+ cit->channelName + " :You're not channel operator";
-        client.write(msg);
-        return;
-    }
+   
     else
     {
         std::string more;
+        move = "";
         cmds >> move;
         cmds >> more;
+        if(move.empty()){
+            msg = ":local 324 " + client.nickname + " " + cit->channelName + " " + cit->returnModes();
+            client.write(msg);
+            return;
+        }
+
+        if (!cit->verifyAdminPrivilege((&client)->sock_fd))
+        {    
+            msg = ":local 482 "+ client.nickname +" "+ cit->channelName + " :You're not channel operator";
+            client.write(msg);
+            return;
+        }
+
+
+
         if (!more.empty() && !(move.c_str()[1] == 'o' || move.c_str()[1] == 'l' || move.c_str()[1] == 'k'))
         {
             msg = ":local 461 " + client.nickname + " MODE :Too many parameters1";
