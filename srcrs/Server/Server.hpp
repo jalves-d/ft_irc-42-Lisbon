@@ -59,7 +59,7 @@ class Server {
 		static void handleSIGINT(int signum) {
 			(void)signum;
         	if (serverInstance) {
-            	std::cout << "Received SIGINT (Ctrl+C). Changing member value in Server." << std::endl;
+            	std::cout << "Received SIGINT (Ctrl+C) or SIGQUIT (Ctrl+\\)" << std::endl;
             	serverInstance->setMemberValue(42); // Change the member value to 42.
 			}
    		}

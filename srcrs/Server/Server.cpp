@@ -46,6 +46,7 @@ void Server::start() {
     }
     serverInstance = this;
     signal(SIGINT, &Server::handleSIGINT);
+    signal(SIGQUIT, &Server::handleSIGINT);
 
     struct epoll_event event;
     event.data.fd = serverSocket;
