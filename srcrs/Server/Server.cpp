@@ -214,36 +214,36 @@ void Server::regular_message(std::string full_msg, Client &client)
     Message message;
     message.Message_picker(full_msg);
 	std::string msg = message.get_command();
-    if (message.get_invalid() == true){
-        //std::cout << "Invalid message from client " << client.get_fd() << ": " << message << std::endl;
+    /*if (message.get_invalid() == true){
+        std::cout << "Invalid message from client " << client.get_fd() << ": " << full_msg << std::endl;
         std::string str(":local 421 " + client.nickname + " " + msg + " :Unknown command");
         client.write(str);
         return;
-    }
+    }*/
 	if (msg.compare("JOIN") == 0)
 		join(message.get_params(), client);//join(message.get_params(), *client);
     else if(msg.compare("NAMES") == 0)
         names(message.get_params(), client);
 	else if (msg.compare("LIST") == 0)
-		;//list(message.get_params(), *client);
+		list(message.get_params(), client);
 	else if (msg.compare("KICK") == 0)
 		kick(message.get_params(), client);
 	else if (msg.compare("INVITE") == 0)
-		;//invite(message.get_params(), *client);
+		invite(message.get_params(), client);
 	else if (msg.compare("MODE") == 0)
 		mode(message.get_params(), client);
 	else if (msg.compare("TOPIC") == 0)
-		;//topic(message.get_params(), *client);
+		topic(message.get_params(), client);
 	else if (msg.compare("NICK") == 0)
 		nick(message.get_params(), client);
 	else if (msg.compare("QUIT") == 0)
-		;//quit(message.get_params(), *client);
+		;//quit(message.get_params(), client);
 	else if (msg.compare("PRIVMSG") == 0)
-		;//privmsg(message.get_params(), *client);
+		privmsg(message, client);
     else if (msg.compare("WHO") == 0)
         who(message.get_params(), client);
     else if (msg.compare("PART") == 0)
-        ;//part(message.get_params(), *client
+        part(message.get_params(), client);
 	else{
 		std::string str(":local 421 " + client.nickname + " " + msg + " :Unknown command");
         client.write(str);
@@ -899,5 +899,300 @@ void Server::names(std::string cmd, Client &client)
             getClient(getNickFD(findtarget)).write(msg);
         else
             getClient(getUserFD(findtarget)).write(msg);
+    }
+}
+
+void Server::privmsg(Message message, Client &client)
+{
+    std::string cmd = message.get_params();
+    std::string prefix = message.get_prefix();
+    std::stringstream cmds(cmd);
+    std::string move;
+    std::list<Channel>::iterator    cit;
+    std::list<Client>::iterator clit;
+    std::map<int,int>::iterator it;
+    //int userfd = 0;
+    std::string msg;
+    Client cclient;
+    std::string reasons;
+    cmds >> move;
+    if (move.empty())
+    {
+        msg = ":local 461 " + client.nickname + " PRIVMSG :Not enough parameters";
+        client.write(msg);
+        return;
+    }
+    for (clit = clients.begin(); clit != clients.end(); clit++)
+    {
+        if (clit->nickname == move)
+            break;
+    }
+    if (clit == clients.end())
+    {
+        for (cit = channels.begin(); cit != channels.end(); cit++)
+        {
+            if (cit->channelName == move)
+                break;
+        }
+        if (cit == channels.end())
+        {
+            msg = ":local 401 " + client.nickname + " " + move + " :No such nick/channel";
+            client.write(msg);
+            return;
+        }
+    }
+    else
+    {
+        msg = ":" + prefix + " PRIVMSG " + cmd;
+        client.write(msg);
+        clit->write(msg);
+        return;
+    }
+    if (!cit->verifyUserInChannel(client.sock_fd))
+    {
+        msg = ":local 442 " + client.nickname + " " + cit->channelName + " :You're not on that channel";
+        client.write(msg);
+        return;
+    }
+    msg = ":" + prefix + " PRIVMSG " + cmd;
+    for (it = cit->channelUsers.begin(); it != cit->channelUsers.end(); it++)
+    {
+        cclient = getClient((*it).first);
+        cclient.write(msg);
+    }
+}
+
+void Server::part(std::string cmd, Client &client)
+{
+    std::stringstream cmds(cmd);
+    std::string move;
+    std::list<Channel>::iterator cit;
+    std::map<int,int>::iterator    it;
+    //int userfd = 0;
+    std::string msg;
+    cmds >> move;
+    if (move.empty())
+    {
+        msg = ":local 461 " + client.nickname + " PART :Not enough parameters";
+        client.write(msg);
+        return;
+    }
+    for (cit = channels.begin(); cit != channels.end(); cit++)
+    {
+        if (cit->channelName == move)
+            break;
+    }
+    if (cit == channels.end())
+    {
+        msg = ":local 403 " + client.nickname + " " + move + " :No such channel";
+        client.write(msg);
+    }
+    else
+    {
+        if (!cit->verifyUserInChannel(client.sock_fd))
+        {
+            msg = ":local 442 " + client.nickname + " " + cit->channelName + " :You're not on that channel";
+            client.write(msg);
+            return;
+        }      
+        if (cit->removeClient(client))
+        {
+            Client cclient;
+            msg = ":" + client.getPrefix() + " PART " + cit->channelName;
+            if (!cmds.end)
+                msg += " :";
+            std::string reasons;
+            while (!cmds.end)
+            {
+                cmds >> reasons;
+                msg = msg + reasons;
+            }
+            client.write(msg);
+            for (it = cit->channelUsers.begin(); it != cit->channelUsers.end(); it++)
+            {
+                cclient = getClient((*it).first);
+                cclient.write(msg);
+            }
+        } 
+    }
+}
+
+void Server::invite(std::string cmd, Client &client)
+{
+    std::stringstream cmds(cmd);
+    std::string move;
+    std::string nick;
+    std::list<Channel>::iterator    cit;
+    std::map<int,int>::iterator it;
+    int userfd = 0;
+    std::string msg;
+    cmds >> nick;
+    cmds >> move;
+    if (move.empty() || nick.empty())
+    {
+        msg = ":local 461 " + client.nickname + " INVITE :Not enough parameters";
+        client.write(msg);
+        return;
+    }
+    for (cit = channels.begin(); cit != channels.end(); cit++)
+    {
+        if (cit->channelName == move)
+            break;
+    }
+    if (cit == channels.end())
+    {
+        msg = ":local 403 " + client.nickname + " " + move + " :No such channel";
+        client.write(msg);
+    }
+    else
+    {
+        userfd = getNickFD(nick);
+        if (userfd == -1)
+        {
+            msg = ":local 401 " + client.nickname + " " + nick + " :No such nick";
+            client.write(msg);
+            return;
+        }
+        if (!cit->verifyAdminPrivilege(client.sock_fd))
+        {
+            msg = ":local 482 " + client.nickname + " " + cit->channelName + " :You're not a channel operator";
+            client.write(msg);
+            return;
+        }
+        Client cclient = getClient(userfd);
+        if (cit->addClient(cclient, cit->password))
+        {
+            msg = ":" + client.getPrefix() + " INVITE " + cclient.nickname + " " + cit->channelName;
+            cclient.write(msg);
+            for (it = cit->channelUsers.begin(); it != cit->channelUsers.end(); it++)
+            {
+                cclient = getClient((*it).first);
+                cclient.write(msg);
+            }
+        }
+        return; 
+    }
+}
+
+
+
+
+
+void Server::list(std::string cmd, Client &client)
+{
+    std::list<Channel>::iterator    cit;
+    std::list<Client>::iterator it;
+    std::string msg;
+    msg = "Channel list:";
+    client.write(msg);
+    if (cmd.empty())
+    {
+        for (cit = channels.begin(); cit != channels.end(); cit++)
+        {
+            msg = ":local 322 " + client.nickname + " " + cit->channelName + " " + to_string(cit->channelUsers.size()) + " :" + cit->topic;
+            client.write(msg);
+        }
+        msg = ":local 322 " + client.nickname + " :End of LIST";
+        client.write(msg);
+    }
+    else
+    {
+        std::stringstream cmds(cmd);
+        std::string move;
+        cmds >> move;
+        if(!cmds.end)
+        {
+            msg = ":local 461 " + client.nickname + " LIST :Too many parameters";
+            client.write(msg);
+            return;
+        }
+        for (it = clients.begin(); it != clients.end(); it++)
+        {
+            if (it->nickname == move)
+                break;
+        }
+        if (it == clients.end())
+        {
+            msg = ":local 401 " + client.nickname + " " + move + " :No such nick";
+            client.write(msg);
+            return;
+        }
+        for (cit = channels.begin(); cit != channels.end(); cit++)
+        {
+            if (cit->channelName.find(move) != std::string::npos)
+            {
+                msg = ":local 322 " + it->nickname + " " + cit->channelName + " " + to_string(cit->channelUsers.size()) + " :" + cit->topic;
+                (*it).write(msg);
+            }
+        }
+        msg = ":local 322 " + it->nickname + " :End of LIST";
+        (*it).write(msg);
+    }
+}
+
+
+void Server::topic(std::string cmd, Client &client)
+{
+    std::stringstream cmds(cmd);
+    std::string move;
+    std::list<Channel>::iterator    cit;
+    std::list<Client>::iterator it;
+    std::string msg;
+    cmds >> move;
+    if (move.empty())
+    {
+        msg = ":local 461 " + client.nickname + " TOPIC :Not enough parameters";
+        client.write(msg);
+        return;
+    }
+    for (cit = channels.begin(); cit != channels.end(); cit++)
+    {
+        if (cit->channelName == move)
+            break;
+    }
+    if (cit == channels.end())
+    {
+        msg = ":local 403 " + client.nickname + " " + move + " :No such channel";
+        client.write(msg);
+    }
+    else if (cit->adminOnlyTopic == true && !cit->verifyAdminPrivilege((&client)->sock_fd))
+    {
+        msg = ":local 482 "+ client.nickname +" "+ cit->channelName + " :You're not channel operator";
+        client.write(msg);
+        return;
+    }
+    else
+    {
+        cmds >> move;
+        if (move.empty())
+        {
+            msg = ":local 461 " + client.nickname + " TOPIC :Not enough parameters";
+            client.write(msg);
+            return;
+        }
+        if (cit->verifyUserInChannel(client.sock_fd))
+        {
+            msg = ":local 442 "+ client.nickname +" "+ cit->channelName + " :You're not on that channel";
+            client.write(msg);
+            return;
+        }
+        std::string prevname = cit->topic;
+        std::string temp;
+        while (!cmds.end)
+        {
+            cmds >> temp;
+            move += temp;
+        }
+        if (cit->setChannelTopic(move, client.sock_fd))
+        {
+            for (it = clients.begin(); it != clients.end(); it++)
+            {
+                if(cit->verifyUserInChannel((*it).sock_fd))
+                {
+                    msg = ":" + client.getPrefix() + " TOPIC " + cit->channelName + " :" + prevname + " has topic changed";
+                    (*it).write(msg);
+                }
+            }
+        }
     }
 }

@@ -26,6 +26,7 @@
 # include "../Message/Message.hpp"
 # include "../Client/Client.hpp"
 # include "../Channel/Channel.hpp"
+# include "../utills.hpp"
 
 class Message;
 class Client;
@@ -76,7 +77,7 @@ class Server {
 		void  topic(std::string cmd, Client &);
 		void  invite(std::string cmd, Client &);
 		void  kick(std::string cmd, Client &);
-		void  privmsg(std::string cmd, Client &);
+		void privmsg(Message message, Client &client);
 		void  quit(std::string cmd, Client &);
 		void  who(std::string cmd, Client &);
 		void mode(std::string cmd, Client &);
