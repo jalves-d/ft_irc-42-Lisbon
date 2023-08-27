@@ -230,7 +230,7 @@ bool Channel::kickClient(Client &client, Client &kicker){ //kick a client from t
 
 std::string Channel::returnModes()
 {
-    std::string str = "+";
+    std::string str;
     if (this->adminOnlyTopic == true)
         str += "t";
     if (this->inviteOnly == true)
@@ -239,5 +239,7 @@ std::string Channel::returnModes()
         str += "k";
     if (this->hasUserLimit == true)
         str += "l";
+    if (str.empty()!=true)
+        str = "+" + str;
     return str;
 }

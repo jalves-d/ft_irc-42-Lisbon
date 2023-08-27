@@ -187,12 +187,14 @@ void Server::authMessage(std::string str, Client &client){
 
         if (!(ss >> client.username >> client.mode >> client.unused >> client.realname)) {
             // Extraction failed, handle the error (clear the stream, provide default values, etc.)
+            
             std::cerr << "Error extracting values from the stringstream." << std::endl;
             std::string std(":local 461 " + client.nickname + " USER :Not enough parameters.");
             client.write(std);
             // Optionally, set default values for the fields
         } else {
             // Extraction was successful, proceed as before
+            client.realname.erase(0, 1);
             std::cout << "Username " << client.username << " accepted for client: " << client.get_fd() << std::endl;
             client.registered_user = true;
         }
@@ -221,7 +223,7 @@ void Server::regular_message(std::string full_msg, Client &client)
 	if (msg.compare("JOIN") == 0)
 		join(message.get_params(), client);//join(message.get_params(), *client);
     else if(msg.compare("NAMES") == 0)
-        ;//names(message.get_params(), *client);
+        names(message.get_params(), client);
 	else if (msg.compare("LIST") == 0)
 		;//list(message.get_params(), *client);
 	else if (msg.compare("KICK") == 0)
@@ -431,8 +433,8 @@ void Server::who(std::string params, Client &client) {
                     std::string hopcount = "0"; // You may want to calculate this value
                     std::string str = ":" + this->hostname + " 352 " + client.nickname + " " +
                                       channel + " " + clt->username + " " + clt->hostname + " " +
-                                      this->hostname + " " + clt->nickname + " " + flagsStr +
-                                      " " + hopcount + " :" + clt->realname;
+                                      this->hostname + " " + clt->nickname + " H" + flagsStr +
+                                      " :" + hopcount + " " + clt->realname;
 
                     std::cout << str << std::endl;
                     client.write(str);
